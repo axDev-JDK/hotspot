@@ -94,8 +94,16 @@ void Abstract_VM_Version::initialize() {
 #ifdef TIERED
   #define VMTYPE "Server"
 #else
-  #define VMTYPE COMPILER1_PRESENT("Client")   \
-                 COMPILER2_PRESENT("Server")
+#if defined(COMPILER1) || defined(COMPILER2)
+   #define VMTYPE COMPILER1_PRESENT("Client")   \
+                  COMPILER2_PRESENT("Server")
+#else
+#ifdef ZERO
+  #define VMTYPE "Zero"
+#else
+  #define VMTYPE "Core"
+#endif // ZERO
+#endif // COMPILER1 || COMPILER2
 #endif // TIERED
 #endif // KERNEL
 
@@ -142,10 +150,14 @@ const char* Abstract_VM_Version::vm_release() {
                  WINDOWS_ONLY("windows")         \
                  SOLARIS_ONLY("solaris")
 
+#ifdef ZERO
+#define CPU      ZERO_LIBARCH
+#else
 #define CPU      IA32_ONLY("x86")                \
                  IA64_ONLY("ia64")               \
                  AMD64_ONLY("amd64")             \
                  SPARC_ONLY("sparc")
+#endif // ZERO
 
 const char *Abstract_VM_Version::vm_platform_string() {
   return OS "-" CPU;

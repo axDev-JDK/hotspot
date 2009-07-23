@@ -25,6 +25,10 @@
 # include "incls/_precompiled.incl"
 # include "incls/_vmError.cpp.incl"
 
+# ifdef ZERO
+# include <stackPrinter_zero.hpp>
+# endif // ZERO
+
 // List of environment variables that should be reported in error log file.
 const char *env_list[] = {
   // All platforms
@@ -396,6 +400,7 @@ void VMError::report(outputStream* st) {
        st->cr();
      }
 
+#ifndef ZERO
   STEP(110, "(printing stack bounds)" )
 
      if (_verbose) {
@@ -453,11 +458,16 @@ void VMError::report(outputStream* st) {
           st->cr();
        }
      }
+#endif // !ZERO
 
   STEP(130, "(printing Java stack)" )
 
      if (_verbose && _thread && _thread->is_Java_thread()) {
        JavaThread* jt = (JavaThread*)_thread;
+#ifdef ZERO
+       st->print_cr("Java stack:");
+       ZeroStackPrinter(st, buf, sizeof(buf)).print(jt);
+#else
        if (jt->has_last_Java_frame()) {
          st->print_cr("Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)");
          for(StackFrameStream sfs(jt); !sfs.is_done(); sfs.next()) {
@@ -465,6 +475,7 @@ void VMError::report(outputStream* st) {
            st->cr();
          }
        }
+#endif // ZERO
      }
 
   STEP(140, "(printing VM operation)" )
@@ -476,6 +487,14 @@ void VMError::report(outputStream* st) {
           op->print_on_error(st);
           st->cr();
           st->cr();
+#ifdef ZERO
+          if (op->calling_thread()->is_Java_thread()) {
+            st->print_cr("Calling thread's Java stack:");
+            ZeroStackPrinter(st, buf, sizeof(buf)).print(
+              (JavaThread *) op->calling_thread());
+            st->cr();
+          }
+#endif // ZERO
         }
      }
 
