@@ -94,6 +94,15 @@ all_fastdebug: fastdebug fastdebug1 fastdebugkernel docs export_fastdebug
 all_debug:     jvmg jvmg1 jvmgkernel docs export_debug
 all_optimized: optimized optimized1 optimizedkernel docs export_optimized
 
+# Core (non-compiler) targets made available with this Makefile
+CORE_VM_TARGETS=productcore fastdebugcore optimizedcore jvmgcore
+
+allcore:           all_productcore all_fastdebugcore
+all_productcore:   productcore docs export_product
+all_fastdebugcore: fastdebugcore docs export_fastdebug
+all_debugcore:     jvmgcore docs export_debug
+all_optimizedcore: optimizedcore docs export_optimized
+
 # Do everything
 world:         all create_jdk
 
@@ -115,6 +124,10 @@ $(C1_VM_TARGETS):
 $(C2_VM_TARGETS):
 	$(CD) $(GAMMADIR)/make; \
 	$(MAKE) VM_TARGET=$@ generic_build2 $(ALT_OUT)
+
+$(CORE_VM_TARGETS):
+	$(CD) $(GAMMADIR)/make; \
+	$(MAKE) VM_TARGET=$@ generic_buildcore $(ALT_OUT)
 
 $(KERNEL_VM_TARGETS):
 	$(CD) $(GAMMADIR)/make; \
@@ -162,6 +175,12 @@ else
 		      $(MAKE_ARGS) $(VM_TARGET)
 endif
 
+generic_buildcore:
+	$(MKDIR) -p $(OUTPUTDIR)
+	$(CD) $(OUTPUTDIR); \
+		$(MAKE) -f $(ABS_OS_MAKEFILE) \
+			$(MAKE_ARGS) $(VM_TARGET)
+
 generic_buildkernel:
 	$(MKDIR) -p $(OUTPUTDIR)
 ifeq ($(OSNAME),windows)
@@ -208,19 +227,28 @@ export_debug_jdk:
 XUSAGE=$(HS_SRC_DIR)/share/vm/Xusage.txt
 DOCS_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_docs
 C1_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_compiler1
+ifeq ($(CORE_BUILD), true)
+C2_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_core
+else
 C2_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_compiler2
+endif
 KERNEL_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_kernel
 C1_DIR=$(C1_BASE_DIR)/$(VM_SUBDIR)
 C2_DIR=$(C2_BASE_DIR)/$(VM_SUBDIR)
 KERNEL_DIR=$(KERNEL_BASE_DIR)/$(VM_SUBDIR)
 
 # Misc files and generated files need to come from C1 or C2 area
+ifeq ($(CORE_BUILD), true)
+  MISC_DIR=$(C2_DIR)
+  GEN_DIR=$(C2_BASE_DIR)/generated
+else
 ifeq ($(ARCH_DATA_MODEL), 32)
   MISC_DIR=$(C1_DIR)
   GEN_DIR=$(C1_BASE_DIR)/generated
 else
   MISC_DIR=$(C2_DIR)
   GEN_DIR=$(C2_BASE_DIR)/generated
+endif
 endif
 
 # Bin files (windows)
