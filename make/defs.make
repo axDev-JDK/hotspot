@@ -192,13 +192,14 @@ ifneq ($(OSNAME),windows)
 
   # Use uname output for SRCARCH, but deal with platform differences. If ARCH
   # is not explicitly listed below, it is treated as x86. 
-  SRCARCH     = $(ARCH/$(filter sparc sparc64 ia64 amd64 x86_64,$(ARCH)))
+  SRCARCH     = $(ARCH/$(filter sparc sparc64 ia64 amd64 x86_64 zero,$(ARCH)))
   ARCH/       = x86
   ARCH/sparc  = sparc
   ARCH/sparc64= sparc
   ARCH/ia64   = ia64
   ARCH/amd64  = x86
   ARCH/x86_64 = x86
+  ARCH/zero   = zero
 
   # BUILDARCH is usually the same as SRCARCH, except for sparcv9
   BUILDARCH = $(SRCARCH)
@@ -222,9 +223,19 @@ ifneq ($(OSNAME),windows)
   LIBARCH/sparc   = sparc
   LIBARCH/sparcv9 = sparcv9
   LIBARCH/ia64    = ia64
+  LIBARCH/zero    = $(ZERO_LIBARCH)
 
-  LP64_ARCH = sparcv9 amd64 ia64
+  LP64_ARCH = sparcv9 amd64 ia64 zero
 endif
+
+# Settings for javac
+BOOT_SOURCE_LANGUAGE_VERSION = 6
+BOOT_TARGET_CLASS_VERSION = 6
+SA_SOURCE_LANGUAGE_VERSION = 1.4
+SA_TARGET_CLASS_VERSION = 1.4
+JAVAC_FLAGS = -g -encoding ascii
+BOOTSTRAP_JAVAC_FLAGS = $(JAVAC_FLAGS) -source $(BOOT_SOURCE_LANGUAGE_VERSION) -target $(BOOT_TARGET_CLASS_VERSION)
+SA_JAVAC_FLAGS = $(JAVAC_FLAGS) -source $(SA_SOURCE_LANGUAGE_VERSION) -target $(SA_TARGET_CLASS_VERSION)
 
 # Required make macro settings for all platforms
 MAKE_ARGS += JAVA_HOME=$(ABS_BOOTDIR)
@@ -233,6 +244,8 @@ MAKE_ARGS += GAMMADIR=$(ABS_GAMMADIR)
 MAKE_ARGS += MAKE_VERBOSE=$(MAKE_VERBOSE)
 MAKE_ARGS += HOTSPOT_RELEASE_VERSION=$(HOTSPOT_RELEASE_VERSION)
 MAKE_ARGS += JRE_RELEASE_VERSION=$(JRE_RELEASE_VERSION)
+MAKE_ARGS += BOOTSTRAP_JAVAC_FLAGS="$(BOOTSTRAP_JAVAC_FLAGS)"
+MAKE_ARGS += SA_JAVAC_FLAGS="$(SA_JAVAC_FLAGS)"
 
 # Pass HOTSPOT_BUILD_VERSION as argument to OS specific Makefile
 # to overwrite the default definition since OS specific Makefile also

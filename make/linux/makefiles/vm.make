@@ -126,6 +126,12 @@ mapfile_reorder : mapfile $(REORDERFILE)
 
 STATIC_CXX = true
 
+ifeq ($(ZERO_LIBARCH), ppc64)
+  STATIC_CXX = false
+else
+  STATIC_CXX = true
+endif
+
 ifeq ($(LINK_INTO),AOUT)
   LIBJVM.o                 =
   LIBJVM_MAPFILE           =
@@ -147,6 +153,9 @@ else
   endif
 
   LIBS_VM                  += $(LIBS)
+endif
+ifeq ($(ZERO_BUILD), true)
+  LIBS_VM += $(LIBFFI_LIBS)
 endif
 
 LINK_VM = $(LINK_LIB.c)

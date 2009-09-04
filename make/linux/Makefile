@@ -224,11 +224,22 @@ check_j2se_version:
 	  exit 1; \
 	fi
 
-$(SUBDIRS_TIERED): $(BUILDTREE_MAKE)
+# For Zero builds we need to create the platform file from a template.
+# For non-Zero builds the file will be read directly from $(GAMMADIR)
+ifeq ($(ZERO_BUILD), true)
+  PLATFORM_FILE = $(OUTPUTDIR)/platform_zero
+else
+  PLATFORM_FILE =
+endif
+
+$(OUTPUTDIR)/platform_zero: $(GAMMADIR)/make/$(OSNAME)/platform_zero.in
+	$(SED) 's/@ZERO_ARCHDEF@/$(ZERO_ARCHDEF)/g;s/@ZERO_LIBARCH@/$(ZERO_LIBARCH)/g;' < $< > $@
+
+$(SUBDIRS_TIERED): $(BUILDTREE_MAKE) $(PLATFORM_FILE)
 	$(QUIETLY) $(MAKE) -f $(GAMMADIR)/make/$(OSNAME)/Makefile checks
 	$(BUILDTREE) VARIANT=tiered
 
-$(SUBDIRS_C2): $(BUILDTREE_MAKE)
+$(SUBDIRS_C2): $(BUILDTREE_MAKE) $(PLATFORM_FILE)
 ifdef FORCE_TIERED
 	$(QUIETLY) $(MAKE) -f $(GAMMADIR)/make/$(OSNAME)/Makefile checks
 		$(BUILDTREE) VARIANT=tiered FORCE_TIERED=1
@@ -237,11 +248,11 @@ else
 		$(BUILDTREE) VARIANT=compiler2
 endif
 
-$(SUBDIRS_C1): $(BUILDTREE_MAKE)
+$(SUBDIRS_C1): $(BUILDTREE_MAKE) $(PLATFORM_FILE)
 	$(QUIETLY) $(MAKE) -f $(GAMMADIR)/make/$(OSNAME)/Makefile checks
 	$(BUILDTREE) VARIANT=compiler1
 
-$(SUBDIRS_CORE): $(BUILDTREE_MAKE)
+$(SUBDIRS_CORE): $(BUILDTREE_MAKE) $(PLATFORM_FILE)
 	$(QUIETLY) $(MAKE) -f $(GAMMADIR)/make/$(OSNAME)/Makefile checks
 	$(BUILDTREE) VARIANT=core
 
