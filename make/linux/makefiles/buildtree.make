@@ -63,10 +63,14 @@ QUIETLY$(MAKE_VERBOSE)	= @
 # For now, until the compiler is less wobbly:
 TESTFLAGS	= -Xbatch -showversion
 
-ifdef USE_SUNCC
-PLATFORM_FILE	= $(GAMMADIR)/make/$(OS_FAMILY)/platform_$(BUILDARCH).suncc
+ifeq ($(ZERO_BUILD), true)
+  PLATFORM_FILE = $(shell dirname $(shell dirname $(shell pwd)))/platform_zero
 else
-PLATFORM_FILE   = $(GAMMADIR)/make/$(OS_FAMILY)/platform_$(BUILDARCH)
+  ifdef USE_SUNCC
+    PLATFORM_FILE = $(GAMMADIR)/make/$(OS_FAMILY)/platform_$(BUILDARCH).suncc
+  else
+    PLATFORM_FILE = $(GAMMADIR)/make/$(OS_FAMILY)/platform_$(BUILDARCH)
+  endif
 endif
 
 ifdef FORCE_TIERED
@@ -321,6 +325,7 @@ DATA_MODE/sparc   = 32
 DATA_MODE/sparcv9 = 64
 DATA_MODE/amd64   = 64
 DATA_MODE/ia64    = 64
+DATA_MODE/zero    = $(ZERO_BITSPERWORD)
 
 JAVA_FLAG/32 = -d32
 JAVA_FLAG/64 = -d64
