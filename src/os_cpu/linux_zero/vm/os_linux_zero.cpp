@@ -26,24 +26,31 @@
 // do not include precompiled header file
 #include "incls/_os_linux_zero.cpp.incl"
 
-address os::current_stack_pointer()
-{
+address os::current_stack_pointer() {
   address dummy = (address) &dummy;
   return dummy;
 }
 
-frame os::get_sender_for_C_frame(frame* fr)
-{
-  Unimplemented();
+frame os::get_sender_for_C_frame(frame* fr) {
+  ShouldNotCallThis();
 }
 
-frame os::current_frame()
-{
-  Unimplemented();
+frame os::current_frame() {
+  // The only thing that calls this is the stack printing code in
+  // VMError::report:
+  //   - Step 110 (printing stack bounds) uses the sp in the frame
+  //     to determine the amount of free space on the stack.  We
+  //     set the sp to a close approximation of the real value in
+  //     order to allow this step to complete.
+  //   - Step 120 (printing native stack) tries to walk the stack.
+  //     The frame we create has a NULL pc, which is ignored as an
+  //     invalid frame.
+  frame dummy = frame();
+  dummy.set_sp((intptr_t *) current_stack_pointer());
+  return dummy;
 }
 
-char* os::non_memory_address_word()
-{
+char* os::non_memory_address_word() {
   // Must never look like an address returned by reserve_memory,
   // even in its subfields (as defined by the CPU immediate fields,
   // if the CPU splits constants across multiple instructions).
@@ -57,33 +64,29 @@ char* os::non_memory_address_word()
 #endif // SPARC
 }
 
-void os::initialize_thread()
-{
+void os::initialize_thread() {
   // Nothing to do.
 }
 
-address os::Linux::ucontext_get_pc(ucontext_t* uc)
-{
-  Unimplemented();
+address os::Linux::ucontext_get_pc(ucontext_t* uc) {
+  ShouldNotCallThis();
 }
 
 ExtendedPC os::fetch_frame_from_context(void* ucVoid,
                                         intptr_t** ret_sp,
                                         intptr_t** ret_fp) {
-  Unimplemented();
+  ShouldNotCallThis();
 }
 
-frame os::fetch_frame_from_context(void* ucVoid)
-{
-  Unimplemented();
+frame os::fetch_frame_from_context(void* ucVoid) {
+  ShouldNotCallThis();
 }
 
 extern "C" int
 JVM_handle_linux_signal(int sig,
                         siginfo_t* info,
                         void* ucVoid,
-                        int abort_if_unrecognized)
-{
+                        int abort_if_unrecognized) {
   ucontext_t* uc = (ucontext_t*) ucVoid;
 
   Thread* t = ThreadLocalStorage::get_thread_slow();
@@ -136,11 +139,11 @@ JVM_handle_linux_signal(int sig,
         // stack overflow
         if (thread->in_stack_yellow_zone(addr)) {
           thread->disable_stack_yellow_zone();
-          Unimplemented();
+          ShouldNotCallThis();
         }
         else if (thread->in_stack_red_zone(addr)) {
           thread->disable_stack_red_zone();
-          Unimplemented();
+          ShouldNotCallThis();
         }
         else {
           // Accessing stack address below sp may cause SEGV if
@@ -159,16 +162,16 @@ JVM_handle_linux_signal(int sig,
           else {
             fatal("recursive segv. expanding stack.");
           }
-        } 
+        }
       }
     }
 
     /*if (thread->thread_state() == _thread_in_Java) {
-      Unimplemented();
+      ShouldNotCallThis();
     }
     else*/ if (thread->thread_state() == _thread_in_vm &&
                sig == SIGBUS && thread->doing_unsafe_access()) {
-      Unimplemented();
+      ShouldNotCallThis();
     }
 
     // jni_fast_Get<Primitive>Field can trap at certain pc's if a GC
@@ -215,7 +218,7 @@ JVM_handle_linux_signal(int sig,
           "\n#    OOO        c_c_(___)");
   }
 #endif // !PRODUCT
-  
+
   const char *fmt = "caught unhandled signal %d";
   char buf[64];
 
@@ -223,24 +226,20 @@ JVM_handle_linux_signal(int sig,
   fatal(buf);
 }
 
-void os::Linux::init_thread_fpu_state(void)
-{
+void os::Linux::init_thread_fpu_state(void) {
   // Nothing to do
 }
 
-int os::Linux::get_fpu_control_word()
-{
-  Unimplemented();
+int os::Linux::get_fpu_control_word() {
+  ShouldNotCallThis();
 }
 
-void os::Linux::set_fpu_control_word(int fpu)
-{
-  Unimplemented();
+void os::Linux::set_fpu_control_word(int fpu) {
+  ShouldNotCallThis();
 }
 
-bool os::is_allocatable(size_t bytes)
-{
-  Unimplemented();
+bool os::is_allocatable(size_t bytes) {
+  ShouldNotCallThis();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -248,13 +247,11 @@ bool os::is_allocatable(size_t bytes)
 
 size_t os::Linux::min_stack_allowed = 64 * K;
 
-bool os::Linux::supports_variable_stack_size()
-{
+bool os::Linux::supports_variable_stack_size() {
   return true;
 }
 
-size_t os::Linux::default_stack_size(os::ThreadType thr_type)
-{
+size_t os::Linux::default_stack_size(os::ThreadType thr_type) {
 #ifdef _LP64
   size_t s = (thr_type == os::compiler_thread ? 4 * M : 1 * M);
 #else
@@ -263,15 +260,13 @@ size_t os::Linux::default_stack_size(os::ThreadType thr_type)
   return s;
 }
 
-size_t os::Linux::default_guard_size(os::ThreadType thr_type)
-{
+size_t os::Linux::default_guard_size(os::ThreadType thr_type) {
   // Only enable glibc guard pages for non-Java threads
   // (Java threads have HotSpot guard pages)
   return (thr_type == java_thread ? 0 : page_size());
 }
 
-static void current_stack_region(address *bottom, size_t *size)
-{
+static void current_stack_region(address *bottom, size_t *size) {
   pthread_attr_t attr;
   int res = pthread_getattr_np(pthread_self(), &attr);
   if (res != 0) {
@@ -339,16 +334,14 @@ static void current_stack_region(address *bottom, size_t *size)
   *size = stack_top - stack_bottom;
 }
 
-address os::current_stack_base()
-{
+address os::current_stack_base() {
   address bottom;
   size_t size;
   current_stack_region(&bottom, &size);
   return bottom + size;
 }
 
-size_t os::current_stack_size()
-{
+size_t os::current_stack_size() {
   // stack size includes normal stack and HotSpot guard pages
   address bottom;
   size_t size;
@@ -359,9 +352,8 @@ size_t os::current_stack_size()
 /////////////////////////////////////////////////////////////////////////////
 // helper functions for fatal error handler
 
-void os::print_context(outputStream* st, void* context)
-{
-  Unimplemented();
+void os::print_context(outputStream* st, void* context) {
+  ShouldNotCallThis();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -369,25 +361,21 @@ void os::print_context(outputStream* st, void* context)
 // You probably want to disassemble these monkeys to check they're ok.
 
 extern "C" {
-  int SpinPause()
-  {
+  int SpinPause() {
   }
 
-  int SafeFetch32(int *adr, int errValue)
-  {
+  int SafeFetch32(int *adr, int errValue) {
     int value = errValue;
     value = *adr;
     return value;
   }
-  intptr_t SafeFetchN(intptr_t *adr, intptr_t errValue)
-  {
+  intptr_t SafeFetchN(intptr_t *adr, intptr_t errValue) {
     intptr_t value = errValue;
     value = *adr;
     return value;
   }
 
-  void _Copy_conjoint_jshorts_atomic(jshort* from, jshort* to, size_t count)
-  {
+  void _Copy_conjoint_jshorts_atomic(jshort* from, jshort* to, size_t count) {
     if (from > to) {
       jshort *end = from + count;
       while (from < end)
@@ -401,8 +389,7 @@ extern "C" {
         *(to--) = *(from--);
     }
   }
-  void _Copy_conjoint_jints_atomic(jint* from, jint* to, size_t count)
-  {
+  void _Copy_conjoint_jints_atomic(jint* from, jint* to, size_t count) {
     if (from > to) {
       jint *end = from + count;
       while (from < end)
@@ -416,8 +403,7 @@ extern "C" {
         *(to--) = *(from--);
     }
   }
-  void _Copy_conjoint_jlongs_atomic(jlong* from, jlong* to, size_t count)
-  {
+  void _Copy_conjoint_jlongs_atomic(jlong* from, jlong* to, size_t count) {
     if (from > to) {
       jlong *end = from + count;
       while (from < end)
@@ -432,21 +418,25 @@ extern "C" {
     }
   }
 
-  void _Copy_arrayof_conjoint_bytes(HeapWord* from, HeapWord* to, size_t count)
-  {
-    Unimplemented();
+  void _Copy_arrayof_conjoint_bytes(HeapWord* from,
+                                    HeapWord* to,
+                                    size_t    count) {
+    ShouldNotCallThis();
   }
-  void _Copy_arrayof_conjoint_jshorts(HeapWord* from, HeapWord* to,
-                                      size_t count) {
-    Unimplemented();
+  void _Copy_arrayof_conjoint_jshorts(HeapWord* from,
+                                      HeapWord* to,
+                                      size_t    count) {
+    ShouldNotCallThis();
   }
-  void _Copy_arrayof_conjoint_jints(HeapWord* from, HeapWord* to, size_t count)
-  {
-    Unimplemented();
+  void _Copy_arrayof_conjoint_jints(HeapWord* from,
+                                    HeapWord* to,
+                                    size_t    count) {
+    ShouldNotCallThis();
   }
-  void _Copy_arrayof_conjoint_jlongs(HeapWord* from, HeapWord* to,
-                                     size_t count) {
-    Unimplemented();
+  void _Copy_arrayof_conjoint_jlongs(HeapWord* from,
+                                     HeapWord* to,
+                                     size_t    count) {
+    ShouldNotCallThis();
   }
 };
 
@@ -459,9 +449,8 @@ extern "C" {
   long long unsigned int __sync_val_compare_and_swap_8(
     volatile void *ptr,
     long long unsigned int oldval,
-    long long unsigned int newval)
-  {
-    Unimplemented();
+    long long unsigned int newval) {
+    ShouldNotCallThis();
   }
 };
 #endif // !_LP64

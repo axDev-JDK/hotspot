@@ -26,7 +26,6 @@
 #include "incls/_precompiled.incl"
 #include "incls/_bytecodes_zero.cpp.incl"
 
-void Bytecodes::pd_initialize()
-{
+void Bytecodes::pd_initialize() {
   // No zero specific initialization
 }

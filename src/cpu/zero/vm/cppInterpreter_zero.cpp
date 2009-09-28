@@ -37,8 +37,7 @@
   thread->reset_last_Java_frame();              \
   fixup_after_potential_safepoint()
 
-void CppInterpreter::normal_entry(methodOop method, intptr_t UNUSED, TRAPS)
-{
+void CppInterpreter::normal_entry(methodOop method, intptr_t UNUSED, TRAPS) {
   JavaThread *thread = (JavaThread *) THREAD;
   ZeroStack *stack = thread->zero_stack();
 
@@ -61,8 +60,7 @@ void CppInterpreter::normal_entry(methodOop method, intptr_t UNUSED, TRAPS)
   main_loop(0, THREAD);
 }
 
-void CppInterpreter::main_loop(int recurse, TRAPS)
-{
+void CppInterpreter::main_loop(int recurse, TRAPS) {
   JavaThread *thread = (JavaThread *) THREAD;
   ZeroStack *stack = thread->zero_stack();
 
@@ -107,7 +105,7 @@ void CppInterpreter::main_loop(int recurse, TRAPS)
 
       // Trim back the stack to put the parameters at the top
       stack->set_sp(istate->stack() + 1);
-    
+
       // Make the call
       Interpreter::invoke_method(callee, istate->callee_entry_point(), THREAD);
       fixup_after_potential_safepoint();
@@ -116,7 +114,7 @@ void CppInterpreter::main_loop(int recurse, TRAPS)
       istate->set_stack(stack->sp() - 1);
 
       // Restore the stack
-      stack->set_sp(istate->stack_limit() + 1);    
+      stack->set_sp(istate->stack_limit() + 1);
 
       // Resume the interpreter
       istate->set_msg(BytecodeInterpreter::method_resume);
@@ -156,6 +154,19 @@ void CppInterpreter::main_loop(int recurse, TRAPS)
       assert(HAS_PENDING_EXCEPTION, "should do");
       break;
     }
+    else if (istate->msg() == BytecodeInterpreter::do_osr) {
+      // Unwind the current frame
+      thread->pop_zero_frame();
+
+      // Remove any extension of the previous frame
+      int extra_locals = method->max_locals() - method->size_of_parameters();
+      stack->set_sp(stack->sp() + extra_locals);
+
+      // Jump into the OSR method
+      Interpreter::invoke_osr(
+        method, istate->osr_entry(), istate->osr_buf(), THREAD);
+      return;
+    }
     else {
       ShouldNotReachHere();
     }
@@ -174,8 +185,7 @@ void CppInterpreter::main_loop(int recurse, TRAPS)
     stack->push(result[-i]);
 }
 
-void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
-{
+void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS) {
   // Make sure method is native and not abstract
   assert(method->is_native() && !method->is_abstract(), "should be");
 
@@ -216,8 +226,7 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
   }
 
   // Get the signature handler
-  InterpreterRuntime::SignatureHandler *handler;
-  {
+  InterpreterRuntime::SignatureHandler *handler; {
     address handlerAddr = method->signature_handler();
     if (handlerAddr == NULL) {
       CALL_VM_NOCHECK(InterpreterRuntime::prepare_native_call(thread, method));
@@ -247,22 +256,21 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
     Unimplemented();
   }
   void **arguments;
-  {
+  void *mirror; {
     arguments =
       (void **) stack->alloc(handler->argument_count() * sizeof(void **));
     void **dst = arguments;
-  
+
     void *env = thread->jni_environment();
     *(dst++) = &env;
-  
-    void *mirror = NULL;
+
     if (method->is_static()) {
       istate->set_oop_temp(
         method->constants()->pool_holder()->klass_part()->java_mirror());
       mirror = istate->oop_temp_addr();
       *(dst++) = &mirror;
     }
-  
+
     intptr_t *src = locals;
     for (int i = dst - arguments; i < handler->argument_count(); i++) {
       ffi_type *type = handler->argument_type(i);
@@ -289,7 +297,7 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
     }
   }
 
-  // Set up the Java frame anchor  
+  // Set up the Java frame anchor
   thread->set_last_Java_frame();
 
   // Change the thread state to _thread_in_native
@@ -342,7 +350,7 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
 
   // Reset handle block
   thread->active_handles()->clear();
-  
+
   // Unlock if necessary.  It seems totally wrong that this
   // is skipped in the event of an exception but apparently
   // the template interpreter does this so we do too.
@@ -354,8 +362,7 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
 
     if (header != NULL) {
       if (Atomic::cmpxchg_ptr(header, rcvr->mark_addr(), lock) != lock) {
-        monitor->set_obj(rcvr);
-        {
+        monitor->set_obj(rcvr); {
           HandleMark hm(thread);
           CALL_VM_NOCHECK(InterpreterRuntime::monitorexit(thread, monitor));
         }
@@ -417,7 +424,7 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
     case T_LONG:
       SET_LOCALS_LONG(*(jlong *) result, 0);
       break;
-      
+
     case T_FLOAT:
       SET_LOCALS_FLOAT(*(jfloat *) result, 0);
       break;
@@ -437,8 +444,7 @@ void CppInterpreter::native_entry(methodOop method, intptr_t UNUSED, TRAPS)
   }
 }
 
-void CppInterpreter::accessor_entry(methodOop method, intptr_t UNUSED, TRAPS)
-{
+void CppInterpreter::accessor_entry(methodOop method, intptr_t UNUSED, TRAPS) {
   JavaThread *thread = (JavaThread *) THREAD;
   ZeroStack *stack = thread->zero_stack();
   intptr_t *locals = stack->sp();
@@ -510,8 +516,8 @@ void CppInterpreter::accessor_entry(methodOop method, intptr_t UNUSED, TRAPS)
 
     case ltos:
       SET_LOCALS_LONG(object->long_field_acquire(entry->f2()), 0);
-      break;      
-      
+      break;
+
     case ftos:
       SET_LOCALS_FLOAT(object->float_field_acquire(entry->f2()), 0);
       break;
@@ -548,8 +554,8 @@ void CppInterpreter::accessor_entry(methodOop method, intptr_t UNUSED, TRAPS)
 
     case ltos:
       SET_LOCALS_LONG(object->long_field(entry->f2()), 0);
-      break;      
-      
+      break;
+
     case ftos:
       SET_LOCALS_FLOAT(object->float_field(entry->f2()), 0);
       break;
@@ -568,8 +574,7 @@ void CppInterpreter::accessor_entry(methodOop method, intptr_t UNUSED, TRAPS)
   }
 }
 
-void CppInterpreter::empty_entry(methodOop method, intptr_t UNUSED, TRAPS)
-{
+void CppInterpreter::empty_entry(methodOop method, intptr_t UNUSED, TRAPS) {
   JavaThread *thread = (JavaThread *) THREAD;
   ZeroStack *stack = thread->zero_stack();
 
@@ -583,8 +588,7 @@ void CppInterpreter::empty_entry(methodOop method, intptr_t UNUSED, TRAPS)
   stack->set_sp(stack->sp() + method->size_of_parameters());
 }
 
-bool CppInterpreter::stack_overflow_imminent(JavaThread *thread)
-{
+bool CppInterpreter::stack_overflow_imminent(JavaThread *thread) {
   // How is the ABI stack?
   address stack_top = thread->stack_base() - thread->stack_size();
   int free_stack = os::current_stack_pointer() - stack_top;
@@ -603,14 +607,13 @@ bool CppInterpreter::stack_overflow_imminent(JavaThread *thread)
   if (free_stack < StackShadowPages * os::vm_page_size()) {
     return true;
   }
-  
+
   return false;
 }
 
 InterpreterFrame *InterpreterFrame::build(ZeroStack*       stack,
                                           const methodOop  method,
-                                          JavaThread*      thread)
-{
+                                          JavaThread*      thread) {
   int monitor_words =
     method->is_synchronized() ? frame::interpreter_frame_monitor_size() : 0;
   int stack_words = method->is_native() ? 0 : method->max_stack();
@@ -669,8 +672,7 @@ InterpreterFrame *InterpreterFrame::build(ZeroStack*       stack,
   return (InterpreterFrame *) fp;
 }
 
-int AbstractInterpreter::BasicType_as_index(BasicType type)
-{
+int AbstractInterpreter::BasicType_as_index(BasicType type) {
   int i = 0;
   switch (type) {
     case T_BOOLEAN: i = 0; break;
@@ -691,39 +693,34 @@ int AbstractInterpreter::BasicType_as_index(BasicType type)
   return i;
 }
 
-address InterpreterGenerator::generate_empty_entry()
-{
+address InterpreterGenerator::generate_empty_entry() {
   if (!UseFastEmptyMethods)
     return NULL;
 
-  return generate_entry(CppInterpreter::empty_entry);
+  return generate_entry((address) CppInterpreter::empty_entry);
 }
 
-address InterpreterGenerator::generate_accessor_entry()
-{
+address InterpreterGenerator::generate_accessor_entry() {
   if (!UseFastAccessorMethods)
     return NULL;
 
-  return generate_entry(CppInterpreter::accessor_entry);
+  return generate_entry((address) CppInterpreter::accessor_entry);
 }
 
-address InterpreterGenerator::generate_native_entry(bool synchronized)
-{
-  assert (synchronized == false, "should be");
+address InterpreterGenerator::generate_native_entry(bool synchronized) {
+  assert(synchronized == false, "should be");
 
-  return generate_entry(CppInterpreter::native_entry);
+  return generate_entry((address) CppInterpreter::native_entry);
 }
 
-address InterpreterGenerator::generate_normal_entry(bool synchronized)
-{
-  assert (synchronized == false, "should be");
+address InterpreterGenerator::generate_normal_entry(bool synchronized) {
+  assert(synchronized == false, "should be");
 
-  return generate_entry(CppInterpreter::normal_entry);
+  return generate_entry((address) CppInterpreter::normal_entry);
 }
 
 address AbstractInterpreterGenerator::generate_method_entry(
     AbstractInterpreter::MethodKind kind) {
-
   address entry_point = NULL;
 
   switch (kind) {
@@ -732,27 +729,27 @@ address AbstractInterpreterGenerator::generate_method_entry(
     break;
 
   case Interpreter::native:
-    entry_point = ((InterpreterGenerator*)this)->generate_native_entry(false);
+    entry_point = ((InterpreterGenerator*) this)->generate_native_entry(false);
     break;
 
   case Interpreter::native_synchronized:
-    entry_point = ((InterpreterGenerator*)this)->generate_native_entry(false);
+    entry_point = ((InterpreterGenerator*) this)->generate_native_entry(false);
     break;
 
   case Interpreter::empty:
-    entry_point = ((InterpreterGenerator*)this)->generate_empty_entry();
+    entry_point = ((InterpreterGenerator*) this)->generate_empty_entry();
     break;
 
   case Interpreter::accessor:
-    entry_point = ((InterpreterGenerator*)this)->generate_accessor_entry();
+    entry_point = ((InterpreterGenerator*) this)->generate_accessor_entry();
     break;
 
   case Interpreter::abstract:
-    entry_point = ((InterpreterGenerator*)this)->generate_abstract_entry();
+    entry_point = ((InterpreterGenerator*) this)->generate_abstract_entry();
     break;
 
   case Interpreter::method_handle:
-    entry_point = ((InterpreterGenerator*)this)->generate_method_handle_entry();
+    entry_point = ((InterpreterGenerator*) this)->generate_method_handle_entry();
     break;
 
   case Interpreter::java_lang_math_sin:
@@ -762,7 +759,7 @@ address AbstractInterpreterGenerator::generate_method_entry(
   case Interpreter::java_lang_math_log:
   case Interpreter::java_lang_math_log10:
   case Interpreter::java_lang_math_sqrt:
-    entry_point = ((InterpreterGenerator*)this)->generate_math_entry(kind);
+    entry_point = ((InterpreterGenerator*) this)->generate_math_entry(kind);
     break;
 
   default:
@@ -770,7 +767,7 @@ address AbstractInterpreterGenerator::generate_method_entry(
   }
 
   if (entry_point == NULL)
-    entry_point = ((InterpreterGenerator*)this)->generate_normal_entry(false);
+    entry_point = ((InterpreterGenerator*) this)->generate_normal_entry(false);
 
   return entry_point;
 }
@@ -782,8 +779,7 @@ InterpreterGenerator::InterpreterGenerator(StubQueue* code)
 
 // Deoptimization helpers
 
-InterpreterFrame *InterpreterFrame::build(ZeroStack* stack, int size)
-{
+InterpreterFrame *InterpreterFrame::build(ZeroStack* stack, int size) {
   int size_in_words = size >> LogBytesPerWord;
   assert(size_in_words * wordSize == size, "unaligned");
   assert(size_in_words >= header_words, "too small");
@@ -817,8 +813,7 @@ int AbstractInterpreter::layout_activation(methodOop method,
                                            int       callee_locals,
                                            frame*    caller,
                                            frame*    interpreter_frame,
-                                           bool      is_top_frame)
-{
+                                           bool      is_top_frame) {
   assert(popframe_extra_args == 0, "what to do?");
   assert(!is_top_frame || (!callee_locals && !callee_param_count),
          "top frame should have no caller")
@@ -848,14 +843,14 @@ int AbstractInterpreter::layout_activation(methodOop method,
     intptr_t *stack_base    = monitor_base - monitor_words;
     intptr_t *stack         = stack_base - tempcount - 1;
 
-    BytecodeInterpreter::layout_interpreterState(istate, 
+    BytecodeInterpreter::layout_interpreterState(istate,
                                                  caller,
                                                  NULL,
-                                                 method, 
-                                                 locals, 
-                                                 stack, 
-                                                 stack_base, 
-                                                 monitor_base, 
+                                                 method,
+                                                 locals,
+                                                 stack,
+                                                 stack_base,
+                                                 monitor_base,
                                                  NULL,
                                                  is_top_frame);
   }
@@ -871,8 +866,7 @@ void BytecodeInterpreter::layout_interpreterState(interpreterState istate,
                                                   intptr_t* stack_base,
                                                   intptr_t* monitor_base,
                                                   intptr_t* frame_bottom,
-                                                  bool      is_top_frame)
-{
+                                                  bool      is_top_frame) {
   istate->set_locals(locals);
   istate->set_method(method);
   istate->set_self_link(istate);
@@ -899,32 +893,28 @@ void BytecodeInterpreter::layout_interpreterState(interpreterState istate,
   istate->set_stack_limit(stack_base - method->max_stack() - 1);
 }
 
-address CppInterpreter::return_entry(TosState state, int length)
-{
-  Unimplemented();
+address CppInterpreter::return_entry(TosState state, int length) {
+  ShouldNotCallThis();
 }
 
-address CppInterpreter::deopt_entry(TosState state, int length)
-{
+address CppInterpreter::deopt_entry(TosState state, int length) {
   return NULL;
 }
 
 // Helper for (runtime) stack overflow checks
 
-int AbstractInterpreter::size_top_interpreter_activation(methodOop method)
-{
+int AbstractInterpreter::size_top_interpreter_activation(methodOop method) {
   return 0;
 }
 
 // Helper for figuring out if frames are interpreter frames
 
-bool CppInterpreter::contains(address pc)
-{
+bool CppInterpreter::contains(address pc) {
 #ifdef PRODUCT
   ShouldNotCallThis();
 #else
   return false; // make frame::print_value_on work
-#endif // !PRODUCT  
+#endif // !PRODUCT
 }
 
 // Result handlers and convertors
@@ -932,25 +922,25 @@ bool CppInterpreter::contains(address pc)
 address CppInterpreterGenerator::generate_result_handler_for(
     BasicType type) {
   assembler()->advance(1);
-  return ShouldNotReachHereStub();
+  return ShouldNotCallThisStub();
 }
 
 address CppInterpreterGenerator::generate_tosca_to_stack_converter(
     BasicType type) {
   assembler()->advance(1);
-  return ShouldNotReachHereStub();
+  return ShouldNotCallThisStub();
 }
 
 address CppInterpreterGenerator::generate_stack_to_stack_converter(
     BasicType type) {
   assembler()->advance(1);
-  return ShouldNotReachHereStub();
+  return ShouldNotCallThisStub();
 }
 
 address CppInterpreterGenerator::generate_stack_to_native_abi_converter(
     BasicType type) {
   assembler()->advance(1);
-  return ShouldNotReachHereStub();
+  return ShouldNotCallThisStub();
 }
 
 #endif // CC_INTERP

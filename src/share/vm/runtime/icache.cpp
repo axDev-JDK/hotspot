@@ -78,7 +78,6 @@ void AbstractICache::invalidate_word(address addr) {
 }
 
 void AbstractICache::invalidate_range(address start, int nbytes) {
-#ifndef ZERO
   static bool firstTime = true;
   if (firstTime) {
     guarantee(start == CAST_FROM_FN_PTR(address, _flush_icache_stub),
@@ -98,7 +97,6 @@ void AbstractICache::invalidate_range(address start, int nbytes) {
   }
   call_flush_stub(start, round_to(nbytes, ICache::line_size) >>
                          ICache::log2_line_size);
-#endif // ZERO
 }
 
 // For init.cpp

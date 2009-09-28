@@ -84,6 +84,7 @@ endif
 C1_VM_TARGETS=product1 fastdebug1 optimized1 jvmg1
 C2_VM_TARGETS=product  fastdebug  optimized  jvmg
 KERNEL_VM_TARGETS=productkernel fastdebugkernel optimizedkernel jvmgkernel
+ZERO_VM_TARGETS=productzero fastdebugzero optimizedzero jvmgzero
 
 # JDK directory list
 JDK_DIRS=bin include jre lib demo
@@ -94,14 +95,11 @@ all_fastdebug: fastdebug fastdebug1 fastdebugkernel docs export_fastdebug
 all_debug:     jvmg jvmg1 jvmgkernel docs export_debug
 all_optimized: optimized optimized1 optimizedkernel docs export_optimized
 
-# Core (non-compiler) targets made available with this Makefile
-CORE_VM_TARGETS=productcore fastdebugcore optimizedcore jvmgcore
-
-allcore:           all_productcore all_fastdebugcore
-all_productcore:   productcore docs export_product
-all_fastdebugcore: fastdebugcore docs export_fastdebug
-all_debugcore:     jvmgcore docs export_debug
-all_optimizedcore: optimizedcore docs export_optimized
+allzero:           all_productzero all_fastdebugzero
+all_productzero:   productzero docs export_product
+all_fastdebugzero: fastdebugzero docs export_fastdebug
+all_debugzero:     jvmgzero docs export_debug
+all_optimizedzero: optimizedzero docs export_optimized
 
 # Do everything
 world:         all create_jdk
@@ -125,13 +123,13 @@ $(C2_VM_TARGETS):
 	$(CD) $(GAMMADIR)/make; \
 	$(MAKE) VM_TARGET=$@ generic_build2 $(ALT_OUT)
 
-$(CORE_VM_TARGETS):
-	$(CD) $(GAMMADIR)/make; \
-	$(MAKE) VM_TARGET=$@ generic_buildcore $(ALT_OUT)
-
 $(KERNEL_VM_TARGETS):
 	$(CD) $(GAMMADIR)/make; \
 	$(MAKE) VM_TARGET=$@ generic_buildkernel $(ALT_OUT)
+
+$(ZERO_VM_TARGETS):
+	$(CD) $(GAMMADIR)/make; \
+	$(MAKE) VM_TARGET=$@ generic_buildzero $(ALT_OUT)
 
 # Build compiler1 (client) rule, different for platforms
 generic_build1:
@@ -175,12 +173,6 @@ else
 		      $(MAKE_ARGS) $(VM_TARGET)
 endif
 
-generic_buildcore:
-	$(MKDIR) -p $(OUTPUTDIR)
-	$(CD) $(OUTPUTDIR); \
-		$(MAKE) -f $(ABS_OS_MAKEFILE) \
-			$(MAKE_ARGS) $(VM_TARGET)
-
 generic_buildkernel:
 	$(MKDIR) -p $(OUTPUTDIR)
 ifeq ($(OSNAME),windows)
@@ -198,6 +190,12 @@ ifeq ($(OSNAME),windows)
 else
 	@$(ECHO) "No kernel ($(VM_TARGET)) for OS_NAME=$(OSNAME)"
 endif
+
+generic_buildzero:
+	$(MKDIR) -p $(OUTPUTDIR)
+	$(CD) $(OUTPUTDIR); \
+		$(MAKE) -f $(ABS_OS_MAKEFILE) \
+			$(MAKE_ARGS) $(VM_TARGET)
 
 # Export file rule
 generic_export: $(EXPORT_LIST)
@@ -227,20 +225,18 @@ export_debug_jdk:
 XUSAGE=$(HS_SRC_DIR)/share/vm/Xusage.txt
 DOCS_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_docs
 C1_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_compiler1
-ifeq ($(CORE_BUILD), true)
-C2_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_core
-else
 C2_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_compiler2
-endif
 KERNEL_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_kernel
+ZERO_BASE_DIR=$(OUTPUTDIR)/$(VM_PLATFORM)_zero
 C1_DIR=$(C1_BASE_DIR)/$(VM_SUBDIR)
 C2_DIR=$(C2_BASE_DIR)/$(VM_SUBDIR)
 KERNEL_DIR=$(KERNEL_BASE_DIR)/$(VM_SUBDIR)
+ZERO_DIR=$(ZERO_BASE_DIR)/$(VM_SUBDIR)
 
 # Misc files and generated files need to come from C1 or C2 area
-ifeq ($(CORE_BUILD), true)
-  MISC_DIR=$(C2_DIR)
-  GEN_DIR=$(C2_BASE_DIR)/generated
+ifeq ($(ZERO_BUILD), true)
+  MISC_DIR=$(ZERO_DIR)
+  GEN_DIR=$(ZERO_BASE_DIR)/generated
 else
 ifeq ($(ARCH_DATA_MODEL), 32)
   MISC_DIR=$(C1_DIR)
@@ -293,6 +289,12 @@ endif
 
 # Shared Library
 ifneq ($(OSNAME),windows)
+  ifeq ($(ZERO_BUILD), true)
+$(EXPORT_JRE_LIB_ARCH_DIR)/%.so: $(ZERO_DIR)/%.so
+	$(install-file)
+$(EXPORT_SERVER_DIR)/%.so:       $(ZERO_DIR)/%.so
+	$(install-file)
+  else
 $(EXPORT_JRE_LIB_ARCH_DIR)/%.so: $(C2_DIR)/%.so
 	$(install-file)
 $(EXPORT_CLIENT_DIR)/%.so:       $(C1_DIR)/%.so
@@ -303,6 +305,7 @@ $(EXPORT_SERVER_DIR)/%.so:       $(C2_DIR)/%.so
 	$(install-file)
 $(EXPORT_SERVER_DIR)/64/%.so:    $(C2_DIR)/%.so
 	$(install-file)
+  endif
 endif
 
 # Jar file (sa-jdi.jar)
@@ -341,6 +344,7 @@ clean_build:
 	$(RM) -r $(C1_DIR)
 	$(RM) -r $(C2_DIR)
 	$(RM) -r $(KERNEL_DIR)
+	$(RM) -r $(ZERO_DIR)
 clean_export:
 	$(RM) -r $(EXPORT_PATH)
 clean_jdk:
@@ -363,8 +367,10 @@ $(JDK_IMAGE_DIR)/jre/lib/rt.jar:
 	 ($(CD) $(JDK_IMAGE_DIR) && $(TAR) -xf -)
 
 test_jdk:
-  ifeq ($(ARCH_DATA_MODEL), 32)
+  ifneq ($(ZERO_BUILD), true)
+    ifeq ($(ARCH_DATA_MODEL), 32)
 	$(JDK_IMAGE_DIR)/bin/java -client -version
+    endif
   endif
 	$(JDK_IMAGE_DIR)/bin/java -server -version
 

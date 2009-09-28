@@ -30,8 +30,7 @@
 // For a more detailed description of the stub routine structure
 // see the comment in stubRoutines.hpp
 
-class StubGenerator: public StubCodeGenerator
-{
+class StubGenerator: public StubCodeGenerator {
  private:
   // The call stub is used to call Java from C
   static void call_stub(
@@ -42,8 +41,7 @@ class StubGenerator: public StubCodeGenerator
     address          entry_point,
     intptr_t*        parameters,
     int              parameter_words,
-    TRAPS)
-  {
+    TRAPS) {
     JavaThread *thread = (JavaThread *) THREAD;
     ZeroStack *stack = thread->zero_stack();
 
@@ -102,13 +100,11 @@ class StubGenerator: public StubCodeGenerator
   // These stubs get called from some dumb test routine.
   // I'll write them properly when they're called from
   // something that's actually doing something.
-  static void fake_arraycopy_stub(address src, address dst, int count)
-  {
+  static void fake_arraycopy_stub(address src, address dst, int count) {
     assert(count == 0, "huh?");
   }
 
-  void generate_arraycopy_stubs()
-  {
+  void generate_arraycopy_stubs() {
     // Call the conjoint generation methods immediately after
     // the disjoint ones so that short branches from the former
     // to the latter can be generated.
@@ -124,12 +120,12 @@ class StubGenerator: public StubCodeGenerator
     StubRoutines::_jlong_disjoint_arraycopy  = (address) fake_arraycopy_stub;
     StubRoutines::_jlong_arraycopy           = (address) fake_arraycopy_stub;
 
-    StubRoutines::_oop_disjoint_arraycopy    = UnimplementedStub();
-    StubRoutines::_oop_arraycopy             = UnimplementedStub();
+    StubRoutines::_oop_disjoint_arraycopy    = ShouldNotCallThisStub();
+    StubRoutines::_oop_arraycopy             = ShouldNotCallThisStub();
 
-    StubRoutines::_checkcast_arraycopy       = UnimplementedStub();
-    StubRoutines::_unsafe_arraycopy          = UnimplementedStub();
-    StubRoutines::_generic_arraycopy         = UnimplementedStub();
+    StubRoutines::_checkcast_arraycopy       = ShouldNotCallThisStub();
+    StubRoutines::_unsafe_arraycopy          = ShouldNotCallThisStub();
+    StubRoutines::_generic_arraycopy         = ShouldNotCallThisStub();
 
     // We don't generate specialized code for HeapWord-aligned source
     // arrays, so just use the code we've already generated
@@ -159,8 +155,7 @@ class StubGenerator: public StubCodeGenerator
       StubRoutines::_oop_arraycopy;
   }
 
-  void generate_initial()
-  {
+  void generate_initial() {
     // Generates all stubs and initializes the entry points
 
     // entry points that exist in all platforms Note: This is code
@@ -169,58 +164,56 @@ class StubGenerator: public StubCodeGenerator
     // much more complicated generator structure. See also comment in
     // stubRoutines.hpp.
 
-    StubRoutines::_forward_exception_entry   = UnimplementedStub();
+    StubRoutines::_forward_exception_entry   = ShouldNotCallThisStub();
     StubRoutines::_call_stub_entry           = (address) call_stub;
-    StubRoutines::_catch_exception_entry     = UnimplementedStub();
+    StubRoutines::_catch_exception_entry     = ShouldNotCallThisStub();
 
     // atomic calls
-    StubRoutines::_atomic_xchg_entry         = UnimplementedStub();
-    StubRoutines::_atomic_xchg_ptr_entry     = UnimplementedStub();
-    StubRoutines::_atomic_cmpxchg_entry      = UnimplementedStub();
-    StubRoutines::_atomic_cmpxchg_ptr_entry  = UnimplementedStub();
-    StubRoutines::_atomic_cmpxchg_long_entry = UnimplementedStub();
-    StubRoutines::_atomic_add_entry          = UnimplementedStub();
-    StubRoutines::_atomic_add_ptr_entry      = UnimplementedStub();
-    StubRoutines::_fence_entry               = UnimplementedStub();
+    StubRoutines::_atomic_xchg_entry         = ShouldNotCallThisStub();
+    StubRoutines::_atomic_xchg_ptr_entry     = ShouldNotCallThisStub();
+    StubRoutines::_atomic_cmpxchg_entry      = ShouldNotCallThisStub();
+    StubRoutines::_atomic_cmpxchg_ptr_entry  = ShouldNotCallThisStub();
+    StubRoutines::_atomic_cmpxchg_long_entry = ShouldNotCallThisStub();
+    StubRoutines::_atomic_add_entry          = ShouldNotCallThisStub();
+    StubRoutines::_atomic_add_ptr_entry      = ShouldNotCallThisStub();
+    StubRoutines::_fence_entry               = ShouldNotCallThisStub();
 
     // amd64 does this here, sparc does it in generate_all()
     StubRoutines::_handler_for_unsafe_access_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
   }
 
-  void generate_all()
-  {
+  void generate_all() {
     // Generates all stubs and initializes the entry points
 
     // These entry points require SharedInfo::stack0 to be set up in
     // non-core builds and need to be relocatable, so they each
     // fabricate a RuntimeStub internally.
     StubRoutines::_throw_AbstractMethodError_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
 
     StubRoutines::_throw_ArithmeticException_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
 
     StubRoutines::_throw_NullPointerException_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
 
     StubRoutines::_throw_NullPointerException_at_call_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
 
     StubRoutines::_throw_StackOverflowError_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
 
     // support for verify_oop (must happen after universe_init)
     StubRoutines::_verify_oop_subroutine_entry =
-      UnimplementedStub();
+      ShouldNotCallThisStub();
 
     // arraycopy stubs used by compilers
     generate_arraycopy_stubs();
   }
 
  public:
-  StubGenerator(CodeBuffer* code, bool all) : StubCodeGenerator(code)
-  {
+  StubGenerator(CodeBuffer* code, bool all) : StubCodeGenerator(code) {
     if (all) {
       generate_all();
     } else {
@@ -229,16 +222,14 @@ class StubGenerator: public StubCodeGenerator
   }
 };
 
-void StubGenerator_generate(CodeBuffer* code, bool all)
-{
+void StubGenerator_generate(CodeBuffer* code, bool all) {
   StubGenerator g(code, all);
 }
 
 EntryFrame *EntryFrame::build(ZeroStack*       stack,
                               const intptr_t*  parameters,
                               int              parameter_words,
-                              JavaCallWrapper* call_wrapper)
-{
+                              JavaCallWrapper* call_wrapper) {
   if (header_words + parameter_words > stack->available_words()) {
     Unimplemented();
   }

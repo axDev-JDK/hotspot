@@ -26,38 +26,32 @@
 #include "incls/_precompiled.incl"
 #include "incls/_interpreterRT_zero.cpp.incl"
 
-void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_int()
-{
+void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_int() {
   push(T_INT);
   _cif->nargs++;
 }
 
-void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_long()
-{
+void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_long() {
   push(T_LONG);
   _cif->nargs++;
 }
 
-void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_float()
-{
+void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_float() {
   push(T_FLOAT);
   _cif->nargs++;
 }
 
-void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_double()
-{
+void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_double() {
   push(T_DOUBLE);
   _cif->nargs++;
 }
 
-void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_object()
-{
+void InterpreterRuntime::SignatureHandlerGeneratorBase::pass_object() {
   push(T_OBJECT);
   _cif->nargs++;
 }
 
-void InterpreterRuntime::SignatureHandlerGeneratorBase::push(BasicType type)
-{
+void InterpreterRuntime::SignatureHandlerGeneratorBase::push(BasicType type) {
   ffi_type *ftype;
   switch (type) {
   case T_VOID:
@@ -75,7 +69,7 @@ void InterpreterRuntime::SignatureHandlerGeneratorBase::push(BasicType type)
   case T_BYTE:
     ftype = &ffi_type_sint8;
     break;
-    
+
   case T_SHORT:
     ftype = &ffi_type_sint16;
     break;
@@ -91,7 +85,7 @@ void InterpreterRuntime::SignatureHandlerGeneratorBase::push(BasicType type)
   case T_FLOAT:
     ftype = &ffi_type_float;
     break;
-    
+
   case T_DOUBLE:
     ftype = &ffi_type_double;
     break;
@@ -125,8 +119,7 @@ void InterpreterRuntime::SignatureHandlerGeneratorBase::generate(
   push(method()->result_type());
 }
 
-void InterpreterRuntime::SignatureHandler::finalize()
-{
+void InterpreterRuntime::SignatureHandler::finalize() {
   ffi_status status =
     ffi_prep_cif(cif(),
                  FFI_DEFAULT_ABI,
@@ -161,10 +154,9 @@ IRT_ENTRY(address,
   return (address) handler;
 IRT_END
 
-void SignatureHandlerLibrary::pd_set_handler(address handlerAddr)
-{
+void SignatureHandlerLibrary::pd_set_handler(address handlerAddr) {
   InterpreterRuntime::SignatureHandler *handler =
-    InterpreterRuntime::SignatureHandler::from_handlerAddr(handlerAddr);  
+    InterpreterRuntime::SignatureHandler::from_handlerAddr(handlerAddr);
 
   handler->finalize();
 }

@@ -1,6 +1,6 @@
 #
-# Copyright 1999-2008 Sun Microsystems, Inc.  All Rights Reserved.
-# Copyright 2009 Red Hat, Inc.
+# Copyright 2003-2005 Sun Microsystems, Inc.  All Rights Reserved.
+# Copyright 2007, 2008 Red Hat, Inc.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -20,13 +20,24 @@
 # Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
 # CA 95054 USA or visit www.sun.com if you need additional information or
 # have any questions.
-#  
+#
 #
 
-# Setup for Zero (non-Shark) version of VM
+# Setup common to Zero (non-Shark) and Shark versions of VM
 
-# Select which includeDB files to use (in top.make)
-TYPE = ZERO
+# The copied fdlibm routines in sharedRuntimeTrig.o must not be optimized
+OPT_CFLAGS/sharedRuntimeTrig.o = $(OPT_CFLAGS/NOOPT)
+# The copied fdlibm routines in sharedRuntimeTrans.o must not be optimized
+OPT_CFLAGS/sharedRuntimeTrans.o = $(OPT_CFLAGS/NOOPT)
 
-# Install libjvm.so, etc in in server directory.
-VM_SUBDIR = server
+# Specify that the CPU is little endian, if necessary
+ifeq ($(ZERO_ENDIANNESS), little)
+  CFLAGS += -DVM_LITTLE_ENDIAN
+endif
+
+# Specify that the CPU is 64 bit, if necessary
+ifeq ($(ARCH_DATA_MODEL), 64)
+  CFLAGS += -D_LP64=1
+endif
+
+OPT_CFLAGS/compactingPermGenGen.o = -O1

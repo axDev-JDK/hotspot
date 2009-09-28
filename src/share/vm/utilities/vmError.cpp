@@ -25,10 +25,6 @@
 # include "incls/_precompiled.incl"
 # include "incls/_vmError.cpp.incl"
 
-# ifdef ZERO
-# include <stackPrinter_zero.hpp>
-# endif // ZERO
-
 // List of environment variables that should be reported in error log file.
 const char *env_list[] = {
   // All platforms
@@ -400,7 +396,6 @@ void VMError::report(outputStream* st) {
        st->cr();
      }
 
-#ifndef ZERO
   STEP(110, "(printing stack bounds)" )
 
      if (_verbose) {
@@ -458,15 +453,44 @@ void VMError::report(outputStream* st) {
           st->cr();
        }
      }
-#endif // !ZERO
 
   STEP(130, "(printing Java stack)" )
 
      if (_verbose && _thread && _thread->is_Java_thread()) {
        JavaThread* jt = (JavaThread*)_thread;
 #ifdef ZERO
-       st->print_cr("Java stack:");
-       ZeroStackPrinter(st, buf, sizeof(buf)).print(jt);
+       if (jt->zero_stack()->sp() && jt->top_zero_frame()) {
+         // StackFrameStream uses the frame anchor, which may not have
+         // been set up.  This can be done at any time in Zero, however,
+         // so if it hasn't been set up then we just set it up now and
+         // clear it again when we're done.
+         bool has_last_Java_frame = jt->has_last_Java_frame();
+         if (!has_last_Java_frame)
+           jt->set_last_Java_frame();
+         st->print("Java frames:");
+  
+         // If the top frame is a Shark frame and the frame anchor isn't
+         // set up then it's possible that the information in the frame
+         // is garbage: it could be from a previous decache, or it could
+         // simply have never been written.  So we print a warning...
+         StackFrameStream sfs(jt);
+         if (!has_last_Java_frame && !sfs.is_done()) {
+           if (sfs.current()->zeroframe()->is_shark_frame()) {
+             st->print(" (TOP FRAME MAY BE JUNK)");
+           }
+         }
+         st->cr();
+  
+         // Print the frames
+         for(int i = 0; !sfs.is_done(); sfs.next(), i++) {
+           sfs.current()->zero_print_on_error(i, st, buf, sizeof(buf));
+           st->cr();
+         }
+  
+         // Reset the frame anchor if necessary
+         if (!has_last_Java_frame)
+           jt->reset_last_Java_frame();
+       }
 #else
        if (jt->has_last_Java_frame()) {
          st->print_cr("Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)");
@@ -487,14 +511,6 @@ void VMError::report(outputStream* st) {
           op->print_on_error(st);
           st->cr();
           st->cr();
-#ifdef ZERO
-          if (op->calling_thread()->is_Java_thread()) {
-            st->print_cr("Calling thread's Java stack:");
-            ZeroStackPrinter(st, buf, sizeof(buf)).print(
-              (JavaThread *) op->calling_thread());
-            st->cr();
-          }
-#endif // ZERO
         }
      }
 

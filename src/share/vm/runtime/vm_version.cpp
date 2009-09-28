@@ -93,17 +93,13 @@ void Abstract_VM_Version::initialize() {
 #else // KERNEL
 #ifdef TIERED
   #define VMTYPE "Server"
-#else
-#if defined(COMPILER1) || defined(COMPILER2)
-   #define VMTYPE COMPILER1_PRESENT("Client")   \
-                  COMPILER2_PRESENT("Server")
-#else
+#else // TIERED
 #ifdef ZERO
   #define VMTYPE "Zero"
-#else
-  #define VMTYPE "Core"
+#else // ZERO
+   #define VMTYPE COMPILER1_PRESENT("Client")   \
+                  COMPILER2_PRESENT("Server")
 #endif // ZERO
-#endif // COMPILER1 || COMPILER2
 #endif // TIERED
 #endif // KERNEL
 

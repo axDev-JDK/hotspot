@@ -26,73 +26,52 @@
 #include "incls/_precompiled.incl"
 #include "incls/_assembler_zero.cpp.incl"
 
-int AbstractAssembler::code_fill_byte()
-{
+int AbstractAssembler::code_fill_byte() {
   return 0;
 }
 
-void Assembler::pd_patch_instruction(address branch, address target)
-{
-  Unimplemented();
+void Assembler::pd_patch_instruction(address branch, address target) {
+  ShouldNotCallThis();
 }
 
 #ifndef PRODUCT
-void Assembler::pd_print_patched_instruction(address branch)
-{
-  Unimplemented();
+void Assembler::pd_print_patched_instruction(address branch) {
+  ShouldNotCallThis();
 }
 #endif // PRODUCT
 
-void MacroAssembler::align(int modulus)
-{
+void MacroAssembler::align(int modulus) {
   while (offset() % modulus != 0)
     emit_byte(AbstractAssembler::code_fill_byte());
 }
 
-void MacroAssembler::bang_stack_with_offset(int offset)
-{
-  Unimplemented();
+void MacroAssembler::bang_stack_with_offset(int offset) {
+  ShouldNotCallThis();
 }
 
-void MacroAssembler::advance(int bytes)
-{
+void MacroAssembler::advance(int bytes) {
   _code_pos += bytes;
   sync();
 }
 
-RegisterOrConstant MacroAssembler::delayed_value_impl(intptr_t* delayed_value_addr,
-						      Register tmpl, int offset) 
-{
-  Unimplemented();
+RegisterOrConstant MacroAssembler::delayed_value_impl(
+  intptr_t* delayed_value_addr, Register tmpl, int offset) {
+  ShouldNotCallThis();
 }
 
-void MacroAssembler::store_oop(jobject obj)
-{
+void MacroAssembler::store_oop(jobject obj) {
   code_section()->relocate(pc(), oop_Relocation::spec_for_immediate());
   emit_address((address) obj);
 }
 
-static void _UnimplementedStub()
-{
-  report_unimplemented(__FILE__, __LINE__);
+static void should_not_call() {
+  report_should_not_call(__FILE__, __LINE__);
 }
 
-address UnimplementedStub()
-{
-  return (address) _UnimplementedStub;
+address ShouldNotCallThisStub() {
+  return (address) should_not_call;
 }
 
-address UnimplementedEntry()
-{
-  return (address) _UnimplementedStub;
-}
-
-static void _ShouldNotReachHereStub()
-{
-  report_should_not_reach_here(__FILE__, __LINE__);
-}
-
-address ShouldNotReachHereStub()
-{
-  return (address) _ShouldNotReachHereStub;
+address ShouldNotCallThisEntry() {
+  return (address) should_not_call;
 }

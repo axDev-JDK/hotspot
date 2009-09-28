@@ -39,7 +39,6 @@ endif
 
 # zero
 ifeq ($(ZERO_BUILD), true)
-  ARCH_DATA_MODEL  = $(ZERO_BITSPERWORD)
   ifeq ($(ARCH_DATA_MODEL), 64)
     MAKE_ARGS      += LP64=1
   endif
@@ -109,7 +108,7 @@ EXPORT_SERVER_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/server
 EXPORT_LIST += $(EXPORT_SERVER_DIR)/Xusage.txt
 EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjsig.so
 EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.so
-ifneq ($(CORE_BUILD), true)
+ifneq ($(ZERO_BUILD), true)
   ifeq ($(ARCH_DATA_MODEL), 32)
     EXPORT_CLIENT_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/client
     EXPORT_LIST += $(EXPORT_CLIENT_DIR)/Xusage.txt

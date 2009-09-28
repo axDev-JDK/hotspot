@@ -99,6 +99,8 @@ class JNIHandles : AllStatic {
 
 class JNIHandleBlock : public CHeapObj {
   friend class VMStructs;
+  friend class CppInterpreter;
+
  private:
   enum SomeConstants {
     block_size_in_oops  = 32                    // Number of handles per handle block
@@ -126,17 +128,11 @@ class JNIHandleBlock : public CHeapObj {
   // Fill block with bad_handle values
   void zap();
 
-#ifdef ZERO
  protected:
-  friend class CppInterpreter;
-#endif // ZERO
-
   // No more handles in the both the current and following blocks
   void clear() { _top = 0; }
 
-#ifdef ZERO
  private:
-#endif // ZERO
   // Free list computation
   void rebuild_free_list();
 
