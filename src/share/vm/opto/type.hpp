@@ -903,6 +903,8 @@ public:
 
   bool  is_loaded() const { return _klass->is_loaded(); }
 
+  bool  is_loaded() const { return _klass->is_loaded(); }
+
   // ptr to klass 'k'
   static const TypeKlassPtr *make( ciKlass* k ) { return make( TypePtr::Constant, k, 0); }
   // ptr to klass 'k' with offset
