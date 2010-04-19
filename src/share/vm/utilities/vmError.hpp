@@ -70,6 +70,10 @@ class VMError : public StackObj {
   // generate an error report
   void report(outputStream* st);
 
+  // generate a stack trace
+  static void print_stack_trace(outputStream* st, JavaThread* jt,
+                                char* buf, int buflen, bool verbose = false);
+
   // accessor
   const char* message()         { return _message; }
 
