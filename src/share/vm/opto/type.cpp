@@ -2546,6 +2546,7 @@ const Type *TypeOopPtr::filter( const Type *kills ) const {
   if (ftip != NULL && ktip != NULL &&
       ftip->is_loaded() &&  ftip->klass()->is_interface() &&
       ktip->is_loaded() && !ktip->klass()->is_interface()) {
+    // Happens in a CTW of rt.jar, 320-341, no extra flags
     assert(!ftip->klass_is_exact(), "interface could not be exact");
     return ktip->cast_to_ptr_type(ftip->ptr());
   }
@@ -2555,7 +2556,6 @@ const Type *TypeOopPtr::filter( const Type *kills ) const {
       ftkp->is_loaded() &&  ftkp->klass()->is_interface() &&
       !ftkp->klass_is_exact() && // Keep exact interface klass
       ktkp->is_loaded() && !ktkp->klass()->is_interface()) {
-    // Happens in a CTW of rt.jar, 320-341, no extra flags
     return ktkp->cast_to_ptr_type(ftkp->ptr());
   }
 
@@ -2814,7 +2814,8 @@ const Type *TypeInstPtr::xmeet( const Type *t ) const {
         // then we can subclass in the Java class hierarchy.
         if (klass()->equals(ciEnv::current()->Object_klass())) {
           // that is, tp's array type is a subtype of my klass
-          return TypeAryPtr::make(ptr, tp->ary(), tp->klass(), tp->klass_is_exact(), offset, instance_id);
+          return TypeAryPtr::make(ptr, (ptr == Constant ? tp->const_oop() : NULL),
+                                  tp->ary(), tp->klass(), tp->klass_is_exact(), offset, instance_id);
         }
       }
       // The other case cannot happen, since I cannot be a subtype of an array.
@@ -3420,7 +3421,8 @@ const Type *TypeAryPtr::xmeet( const Type *t ) const {
         // then we can subclass in the Java class hierarchy.
         if( tp->klass()->equals(ciEnv::current()->Object_klass()) ) {
           // that is, my array type is a subtype of 'tp' klass
-          return make( ptr, _ary, _klass, _klass_is_exact, offset, instance_id );
+          return make( ptr, (ptr == Constant ? const_oop() : NULL),
+                       _ary, _klass, _klass_is_exact, offset, instance_id );
         }
       }
       // The other case cannot happen, since t cannot be a subtype of an array.

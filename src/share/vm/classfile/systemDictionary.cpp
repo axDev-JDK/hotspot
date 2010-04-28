@@ -2589,7 +2589,7 @@ void SystemDictionary::verify() {
 
   // Verify constraint table
   guarantee(constraints() != NULL, "Verify of loader constraints failed");
-  constraints()->verify(dictionary());
+  constraints()->verify(dictionary(), placeholders());
 }
 
 

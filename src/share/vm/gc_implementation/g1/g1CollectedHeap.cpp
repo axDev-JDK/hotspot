@@ -583,7 +583,7 @@ HeapRegion* G1CollectedHeap::newAllocRegion_work(size_t word_size,
            res->zero_fill_state() == HeapRegion::Allocated)),
          "Non-young alloc Regions must be zero filled (and non-H)");
 
-  if (G1PrintRegions) {
+  if (G1PrintHeapRegions) {
     if (res != NULL) {
       gclog_or_tty->print_cr("new alloc region %d:["PTR_FORMAT", "PTR_FORMAT"], "
                              "top "PTR_FORMAT,
@@ -2102,18 +2102,21 @@ size_t G1CollectedHeap::tlab_capacity(Thread* ignored) const {
 size_t G1CollectedHeap::unsafe_max_tlab_alloc(Thread* ignored) const {
   // Return the remaining space in the cur alloc region, but not less than
   // the min TLAB size.
-  // Also, no more than half the region size, since we can't allow tlabs to
-  // grow big enough to accomodate humongous objects.
 
-  // We need to story it locally, since it might change between when we
-  // test for NULL and when we use it later.
+  // Also, this value can be at most the humongous object threshold,
+  // since we can't allow tlabs to grow big enough to accomodate
+  // humongous objects.
+
+  // We need to store the cur alloc region locally, since it might change
+  // between when we test for NULL and when we use it later.
   ContiguousSpace* cur_alloc_space = _cur_alloc_region;
+  size_t max_tlab_size = _humongous_object_threshold_in_words * wordSize;
+
   if (cur_alloc_space == NULL) {
-    return HeapRegion::GrainBytes/2;
+    return max_tlab_size;
   } else {
-    return MAX2(MIN2(cur_alloc_space->free(),
-                     (size_t)(HeapRegion::GrainBytes/2)),
-                (size_t)MinTLABSize);
+    return MIN2(MAX2(cur_alloc_space->free(), (size_t)MinTLABSize),
+                max_tlab_size);
   }
 }
 
@@ -2477,7 +2480,7 @@ void G1CollectedHeap::print_tracing_info() const {
   if (G1SummarizeRSetStats) {
     g1_rem_set()->print_summary_info();
   }
-  if (G1SummarizeConcurrentMark) {
+  if (G1SummarizeConcMark) {
     concurrent_mark()->print_summary_info();
   }
   if (G1SummarizeZFStats) {
@@ -2505,6 +2508,7 @@ G1CollectedHeap* G1CollectedHeap::heap() {
 }
 
 void G1CollectedHeap::gc_prologue(bool full /* Ignored */) {
+  // always_do_update_barrier = false;
   assert(InlineCacheBuffer::is_empty(), "should have cleaned up ICBuffer");
   // Call allocation profiler
   AllocationProfiler::iterate_since_last_gc();
@@ -2518,6 +2522,7 @@ void G1CollectedHeap::gc_epilogue(bool full /* Ignored */) {
   // is set.
   COMPILER2_PRESENT(assert(DerivedPointerTable::is_empty(),
                         "derived pointer present"));
+  // always_do_update_barrier = true;
 }
 
 void G1CollectedHeap::do_collection_pause() {
@@ -2643,6 +2648,13 @@ G1CollectedHeap::cleanup_surviving_young_words() {
 }
 
 // </NEW PREDICTION>
+
+struct PrepareForRSScanningClosure : public HeapRegionClosure {
+  bool doHeapRegion(HeapRegion *r) {
+    r->rem_set()->set_iter_claimed(0);
+    return false;
+  }
+};
 
 void
 G1CollectedHeap::do_collection_pause_at_safepoint() {
@@ -2782,6 +2794,8 @@ G1CollectedHeap::do_collection_pause_at_safepoint() {
         gclog_or_tty->print_cr("\nAfter pause, heap:");
         print();
 #endif
+        PrepareForRSScanningClosure prepare_for_rs_scan;
+        collection_set_iterate(&prepare_for_rs_scan);
 
         setup_surviving_young_words();
 
@@ -3469,7 +3483,7 @@ void G1CollectedHeap::handle_evacuation_failure_common(oop old, markOop m) {
   HeapRegion* r = heap_region_containing(old);
   if (!r->evacuation_failed()) {
     r->set_evacuation_failed(true);
-    if (G1PrintRegions) {
+    if (G1PrintHeapRegions) {
       gclog_or_tty->print("evacuation failed in heap region "PTR_FORMAT" "
                           "["PTR_FORMAT","PTR_FORMAT")\n",
                           r, r->bottom(), r->end());
@@ -3779,22 +3793,16 @@ oop G1ParCopyHelper::copy_to_survivor_space(oop old) {
   return obj;
 }
 
-template <bool do_gen_barrier, G1Barrier barrier, bool do_mark_forwardee, bool skip_cset_test>
+template <bool do_gen_barrier, G1Barrier barrier, bool do_mark_forwardee>
 template <class T>
-void G1ParCopyClosure <do_gen_barrier, barrier, do_mark_forwardee, skip_cset_test>
+void G1ParCopyClosure <do_gen_barrier, barrier, do_mark_forwardee>
 ::do_oop_work(T* p) {
   oop obj = oopDesc::load_decode_heap_oop(p);
   assert(barrier != G1BarrierRS || obj != NULL,
          "Precondition: G1BarrierRS implies obj is nonNull");
 
-  // The only time we skip the cset test is when we're scanning
-  // references popped from the queue. And we only push on the queue
-  // references that we know point into the cset, so no point in
-  // checking again. But we'll leave an assert here for peace of mind.
-  assert(!skip_cset_test || _g1->obj_in_cs(obj), "invariant");
-
   // here the null check is implicit in the cset_fast_test() test
-  if (skip_cset_test || _g1->in_cset_fast_test(obj)) {
+  if (_g1->in_cset_fast_test(obj)) {
 #if G1_REM_SET_LOGGING
     gclog_or_tty->print_cr("Loc "PTR_FORMAT" contains pointer "PTR_FORMAT" "
                            "into CS.", p, (void*) obj);
@@ -3811,7 +3819,6 @@ void G1ParCopyClosure <do_gen_barrier, barrier, do_mark_forwardee, skip_cset_tes
     }
   }
 
-  // When scanning moved objs, must look at all oops.
   if (barrier == G1BarrierEvac && obj != NULL) {
     _par_scan_state->update_rs(_from, p, _par_scan_state->queue_num());
   }
@@ -3821,8 +3828,8 @@ void G1ParCopyClosure <do_gen_barrier, barrier, do_mark_forwardee, skip_cset_tes
   }
 }
 
-template void G1ParCopyClosure<false, G1BarrierEvac, false, true>::do_oop_work(oop* p);
-template void G1ParCopyClosure<false, G1BarrierEvac, false, true>::do_oop_work(narrowOop* p);
+template void G1ParCopyClosure<false, G1BarrierEvac, false>::do_oop_work(oop* p);
+template void G1ParCopyClosure<false, G1BarrierEvac, false>::do_oop_work(narrowOop* p);
 
 template <class T> void G1ParScanPartialArrayClosure::do_oop_nv(T* p) {
   assert(has_partial_array_mask(p), "invariant");
@@ -3894,11 +3901,11 @@ public:
           assert(UseCompressedOops, "Error");
           narrowOop* p = (narrowOop*) stolen_task;
           assert(has_partial_array_mask(p) ||
-                 _g1h->obj_in_cs(oopDesc::load_decode_heap_oop(p)), "Error");
+                 _g1h->is_in_g1_reserved(oopDesc::load_decode_heap_oop(p)), "Error");
           pss->push_on_queue(p);
         } else {
           oop* p = (oop*) stolen_task;
-          assert(has_partial_array_mask(p) || _g1h->obj_in_cs(*p), "Error");
+          assert(has_partial_array_mask(p) || _g1h->is_in_g1_reserved(*p), "Error");
           pss->push_on_queue(p);
         }
         continue;
@@ -3960,6 +3967,7 @@ public:
     G1ParScanExtRootClosure         only_scan_root_cl(_g1h, &pss);
     G1ParScanPermClosure            only_scan_perm_cl(_g1h, &pss);
     G1ParScanHeapRSClosure          only_scan_heap_rs_cl(_g1h, &pss);
+    G1ParPushHeapRSClosure          push_heap_rs_cl(_g1h, &pss);
 
     G1ParScanAndMarkExtRootClosure  scan_mark_root_cl(_g1h, &pss);
     G1ParScanAndMarkPermClosure     scan_mark_perm_cl(_g1h, &pss);
@@ -3983,7 +3991,7 @@ public:
     _g1h->g1_process_strong_roots(/* not collecting perm */ false,
                                   SharedHeap::SO_AllClasses,
                                   scan_root_cl,
-                                  &only_scan_heap_rs_cl,
+                                  &push_heap_rs_cl,
                                   scan_so_cl,
                                   scan_perm_cl,
                                   i);
@@ -3997,9 +4005,7 @@ public:
       _g1h->g1_policy()->record_obj_copy_time(i, elapsed_ms-term_ms);
       _g1h->g1_policy()->record_termination_time(i, term_ms);
     }
-    if (G1UseSurvivorSpaces) {
-      _g1h->g1_policy()->record_thread_age_table(pss.age_table());
-    }
+    _g1h->g1_policy()->record_thread_age_table(pss.age_table());
     _g1h->update_surviving_young_words(pss.surviving_young_words()+1);
 
     // Clean up any par-expanded rem sets.
