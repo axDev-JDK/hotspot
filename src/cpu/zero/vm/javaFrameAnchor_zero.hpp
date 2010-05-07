@@ -70,3 +70,7 @@
   void set_last_Java_sp(intptr_t* sp) {
     _last_Java_sp = sp;
   }
+
+  static ByteSize last_Java_fp_offset() {
+    return byte_offset_of(JavaFrameAnchor, _last_Java_fp);
+  }
