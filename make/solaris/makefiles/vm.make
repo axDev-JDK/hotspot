@@ -78,6 +78,14 @@ CPPFLAGS =           \
   ${JRE_VERSION}     \
   ${VM_DISTRO}
 
+ifdef DERIVATIVE_ID
+CPPFLAGS += -DDERIVATIVE_ID="\"$(DERIVATIVE_ID)\""
+endif
+
+ifdef DISTRIBUTION_ID
+CPPFLAGS += -DDISTRIBUTION_ID="\"$(DISTRIBUTION_ID)\""
+endif
+
 # CFLAGS_WARN holds compiler options to suppress/enable warnings.
 CFLAGS += $(CFLAGS_WARN)
 
