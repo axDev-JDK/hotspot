@@ -25,7 +25,7 @@
 #include "incls/_precompiled.incl"
 #include "incls/_arguments.cpp.incl"
 
-#define DEFAULT_VENDOR_URL_BUG "http://java.sun.com/webapps/bugreport/crash.jsp"
+#define DEFAULT_VENDOR_URL_BUG "http://icedtea.classpath.org/bugzilla"
 #define DEFAULT_JAVA_LAUNCHER  "generic"
 
 char**  Arguments::_jvm_flags_array             = NULL;

@@ -1684,12 +1684,14 @@ frame.inline.hpp                        signature.hpp
 frame_<arch>.cpp                        frame.inline.hpp
 frame_<arch>.cpp                        handles.inline.hpp
 frame_<arch>.cpp                        interpreter.hpp
+frame_<arch>.cpp                        interpreterRuntime.hpp
 frame_<arch>.cpp                        javaCalls.hpp
 frame_<arch>.cpp                        markOop.hpp
 frame_<arch>.cpp                        methodOop.hpp
 frame_<arch>.cpp                        monitorChunk.hpp
 frame_<arch>.cpp                        oop.inline.hpp
 frame_<arch>.cpp                        resourceArea.hpp
+frame_<arch>.cpp                        scopeDesc.hpp
 frame_<arch>.cpp                        signature.hpp
 frame_<arch>.cpp                        stubCodeGenerator.hpp
 frame_<arch>.cpp                        stubRoutines.hpp
