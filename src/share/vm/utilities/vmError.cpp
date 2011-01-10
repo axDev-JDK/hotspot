@@ -22,8 +22,21 @@
  *
  */
 
-# include "incls/_precompiled.incl"
-# include "incls/_vmError.cpp.incl"
+#include "precompiled.hpp"
+#include "compiler/compileBroker.hpp"
+#include "gc_interface/collectedHeap.hpp"
+#include "runtime/arguments.hpp"
+#include "runtime/frame.inline.hpp"
+#include "runtime/init.hpp"
+#include "runtime/os.hpp"
+#include "runtime/thread.hpp"
+#include "runtime/vmThread.hpp"
+#include "runtime/vm_operations.hpp"
+#include "utilities/debug.hpp"
+#include "utilities/decoder.hpp"
+#include "utilities/defaultStream.hpp"
+#include "utilities/top.hpp"
+#include "utilities/vmError.hpp"
 
 // List of environment variables that should be reported in error log file.
 const char *env_list[] = {
@@ -463,6 +476,14 @@ void VMError::report(outputStream* st) {
        st->cr();
      }
 
+  STEP(105, "(printing register info)")
+
+     // decode register contents if possible
+     if (_verbose && _context && Universe::is_fully_initialized()) {
+       os::print_register_info(st, _context);
+       st->cr();
+     }
+
   STEP(110, "(printing stack bounds)" )
 
      if (_verbose) {
@@ -504,8 +525,10 @@ void VMError::report(outputStream* st) {
        if (fr.pc()) {
           st->print_cr("Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)");
 
-          int count = 0;
+          // initialize decoder to decode C frames
+          Decoder decoder;
 
+          int count = 0;
           while (count++ < StackPrintLimit) {
              fr.print_on_error(st, buf, sizeof(buf));
              st->cr();
@@ -530,7 +553,7 @@ void VMError::report(outputStream* st) {
   STEP(135, "(printing target Java thread stack)" )
 
      // printing Java thread stack trace if it is involved in GC crash
-     if (_verbose && (_thread->is_Named_thread())) {
+     if (_verbose && _thread && (_thread->is_Named_thread())) {
        JavaThread*  jt = ((NamedThread *)_thread)->processed_thread();
        if (jt != NULL) {
          st->print_cr("JavaThread " PTR_FORMAT " (nid = " UINTX_FORMAT ") was being processed", jt, jt->osthread()->thread_id());
@@ -613,6 +636,14 @@ void VMError::report(outputStream* st) {
      if (_verbose && Universe::is_fully_initialized()) {
        // print heap information before vm abort
        Universe::print_on(st);
+       st->cr();
+     }
+
+  STEP(195, "(printing code cache information)" )
+
+     if (_verbose && Universe::is_fully_initialized()) {
+       // print code cache information before vm abort
+       CodeCache::print_bounds(st);
        st->cr();
      }
 

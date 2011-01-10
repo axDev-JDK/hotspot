@@ -22,6 +22,14 @@
  *
  */
 
+#ifndef SHARE_VM_C1_C1_INSTRUCTION_HPP
+#define SHARE_VM_C1_C1_INSTRUCTION_HPP
+
+#include "c1/c1_Compilation.hpp"
+#include "c1/c1_LIR.hpp"
+#include "c1/c1_ValueType.hpp"
+#include "ci/ciField.hpp"
+
 // Predefined classes
 class ciField;
 class ValueStack;
@@ -443,7 +451,7 @@ class Instruction: public CompilationResourceObj {
 
   // generic
   virtual Instruction*      as_Instruction()     { return this; } // to satisfy HASHING1 macro
-  virtual Phi*           as_Phi()          { return NULL; }
+  virtual Phi*              as_Phi()             { return NULL; }
   virtual Local*            as_Local()           { return NULL; }
   virtual Constant*         as_Constant()        { return NULL; }
   virtual AccessField*      as_AccessField()     { return NULL; }
@@ -650,8 +658,24 @@ LEAF(Constant, Instruction)
   virtual intx hash() const;
   virtual bool is_equal(Value v) const;
 
-  virtual BlockBegin* compare(Instruction::Condition condition, Value right,
-                              BlockBegin* true_sux, BlockBegin* false_sux);
+
+  enum CompareResult { not_comparable = -1, cond_false, cond_true };
+
+  virtual CompareResult compare(Instruction::Condition condition, Value right) const;
+  BlockBegin* compare(Instruction::Condition cond, Value right,
+                      BlockBegin* true_sux, BlockBegin* false_sux) const {
+    switch (compare(cond, right)) {
+    case not_comparable:
+      return NULL;
+    case cond_false:
+      return false_sux;
+    case cond_true:
+      return true_sux;
+    default:
+      ShouldNotReachHere();
+      return NULL;
+    }
+  }
 };
 
 
@@ -2086,20 +2110,23 @@ BASE(UnsafeRawOp, UnsafeOp)
 
 LEAF(UnsafeGetRaw, UnsafeRawOp)
  private:
-  bool _may_be_unaligned;  // For OSREntry
+ bool _may_be_unaligned, _is_wide;  // For OSREntry
 
  public:
-  UnsafeGetRaw(BasicType basic_type, Value addr, bool may_be_unaligned)
+ UnsafeGetRaw(BasicType basic_type, Value addr, bool may_be_unaligned, bool is_wide = false)
   : UnsafeRawOp(basic_type, addr, false) {
     _may_be_unaligned = may_be_unaligned;
+    _is_wide = is_wide;
   }
 
-  UnsafeGetRaw(BasicType basic_type, Value base, Value index, int log2_scale, bool may_be_unaligned)
+ UnsafeGetRaw(BasicType basic_type, Value base, Value index, int log2_scale, bool may_be_unaligned, bool is_wide = false)
   : UnsafeRawOp(basic_type, base, index, log2_scale, false) {
     _may_be_unaligned = may_be_unaligned;
+    _is_wide = is_wide;
   }
 
-  bool may_be_unaligned()                               { return _may_be_unaligned; }
+  bool may_be_unaligned()                         { return _may_be_unaligned; }
+  bool is_wide()                                  { return _is_wide; }
 };
 
 
@@ -2287,3 +2314,5 @@ inline BlockBegin* BlockBegin::sux_at(int i) const              { assert(_end ==
 inline void        BlockBegin::add_successor(BlockBegin* sux)   { assert(_end == NULL, "Would create mismatch with successors of BlockEnd");         _successors.append(sux); }
 
 #undef ASSERT_VALUES
+
+#endif // SHARE_VM_C1_C1_INSTRUCTION_HPP

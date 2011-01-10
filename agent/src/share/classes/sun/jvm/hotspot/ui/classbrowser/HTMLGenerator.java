@@ -460,6 +460,19 @@ public class HTMLGenerator implements /* imports */ ClassConstants {
       return buf.toString();
    }
 
+   private String genListOfShort(short[] values) {
+      if (values == null || values.length == 0)  return "";
+      Formatter buf = new Formatter(genHTML);
+      buf.append('[');
+      for (int i = 0; i < values.length; i++) {
+          if (i > 0)  buf.append(' ');
+          buf.append('#');
+          buf.append(Integer.toString(values[i]));
+      }
+      buf.append(']');
+      return buf.toString();
+   }
+
    protected String genHTMLTableForConstantPool(ConstantPool cpool) {
       Formatter buf = new Formatter(genHTML);
       buf.beginTable(1);
@@ -582,9 +595,11 @@ public class HTMLGenerator implements /* imports */ ClassConstants {
                buf.cell(Integer.toString(cpool.getIntAt(index)));
                break;
 
+            case JVM_CONSTANT_InvokeDynamicTrans:
             case JVM_CONSTANT_InvokeDynamic:
                buf.cell("JVM_CONSTANT_InvokeDynamic");
-               buf.cell(genLowHighShort(cpool.getIntAt(index)));
+               buf.cell(genLowHighShort(cpool.getIntAt(index)) +
+                        genListOfShort(cpool.getBootstrapSpecifierAt(index)));
                break;
 
             default:

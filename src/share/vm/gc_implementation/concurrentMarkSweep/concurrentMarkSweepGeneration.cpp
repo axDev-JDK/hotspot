@@ -22,8 +22,39 @@
  *
  */
 
-# include "incls/_precompiled.incl"
-# include "incls/_concurrentMarkSweepGeneration.cpp.incl"
+#include "precompiled.hpp"
+#include "classfile/symbolTable.hpp"
+#include "classfile/systemDictionary.hpp"
+#include "code/codeCache.hpp"
+#include "gc_implementation/concurrentMarkSweep/cmsAdaptiveSizePolicy.hpp"
+#include "gc_implementation/concurrentMarkSweep/cmsCollectorPolicy.hpp"
+#include "gc_implementation/concurrentMarkSweep/cmsGCAdaptivePolicyCounters.hpp"
+#include "gc_implementation/concurrentMarkSweep/cmsOopClosures.inline.hpp"
+#include "gc_implementation/concurrentMarkSweep/compactibleFreeListSpace.hpp"
+#include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepGeneration.inline.hpp"
+#include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepThread.hpp"
+#include "gc_implementation/concurrentMarkSweep/vmCMSOperations.hpp"
+#include "gc_implementation/parNew/parNewGeneration.hpp"
+#include "gc_implementation/shared/collectorCounters.hpp"
+#include "gc_implementation/shared/isGCActiveMark.hpp"
+#include "gc_interface/collectedHeap.inline.hpp"
+#include "memory/cardTableRS.hpp"
+#include "memory/collectorPolicy.hpp"
+#include "memory/gcLocker.inline.hpp"
+#include "memory/genCollectedHeap.hpp"
+#include "memory/genMarkSweep.hpp"
+#include "memory/genOopClosures.inline.hpp"
+#include "memory/iterator.hpp"
+#include "memory/referencePolicy.hpp"
+#include "memory/resourceArea.hpp"
+#include "oops/oop.inline.hpp"
+#include "prims/jvmtiExport.hpp"
+#include "runtime/globals_extension.hpp"
+#include "runtime/handles.inline.hpp"
+#include "runtime/java.hpp"
+#include "runtime/vmThread.hpp"
+#include "services/memoryService.hpp"
+#include "services/runtimeService.hpp"
 
 // statics
 CMSCollector* ConcurrentMarkSweepGeneration::_collector = NULL;
@@ -354,12 +385,8 @@ void CMSStats::adjust_cms_free_adjustment_factor(bool fail, size_t free) {
 double CMSStats::time_until_cms_gen_full() const {
   size_t cms_free = _cms_gen->cmsSpace()->free();
   GenCollectedHeap* gch = GenCollectedHeap::heap();
-  size_t expected_promotion = gch->get_gen(0)->capacity();
-  if (HandlePromotionFailure) {
-    expected_promotion = MIN2(
-        (size_t) _cms_gen->gc_stats()->avg_promoted()->padded_average(),
-        expected_promotion);
-  }
+  size_t expected_promotion = MIN2(gch->get_gen(0)->capacity(),
+                                   (size_t) _cms_gen->gc_stats()->avg_promoted()->padded_average());
   if (cms_free > expected_promotion) {
     // Start a cms collection if there isn't enough space to promote
     // for the next minor collection.  Use the padded average as
@@ -865,57 +892,18 @@ size_t ConcurrentMarkSweepGeneration::max_available() const {
   return free() + _virtual_space.uncommitted_size();
 }
 
-bool ConcurrentMarkSweepGeneration::promotion_attempt_is_safe(
-    size_t max_promotion_in_bytes,
-    bool younger_handles_promotion_failure) const {
-
-  // This is the most conservative test.  Full promotion is
-  // guaranteed if this is used. The multiplicative factor is to
-  // account for the worst case "dilatation".
-  double adjusted_max_promo_bytes = _dilatation_factor * max_promotion_in_bytes;
-  if (adjusted_max_promo_bytes > (double)max_uintx) { // larger than size_t
-    adjusted_max_promo_bytes = (double)max_uintx;
+bool ConcurrentMarkSweepGeneration::promotion_attempt_is_safe(size_t max_promotion_in_bytes) const {
+  size_t available = max_available();
+  size_t av_promo  = (size_t)gc_stats()->avg_promoted()->padded_average();
+  bool   res = (available >= av_promo) || (available >= max_promotion_in_bytes);
+  if (Verbose && PrintGCDetails) {
+    gclog_or_tty->print_cr(
+      "CMS: promo attempt is%s safe: available("SIZE_FORMAT") %s av_promo("SIZE_FORMAT"),"
+      "max_promo("SIZE_FORMAT")",
+      res? "":" not", available, res? ">=":"<",
+      av_promo, max_promotion_in_bytes);
   }
-  bool result = (max_contiguous_available() >= (size_t)adjusted_max_promo_bytes);
-
-  if (younger_handles_promotion_failure && !result) {
-    // Full promotion is not guaranteed because fragmentation
-    // of the cms generation can prevent the full promotion.
-    result = (max_available() >= (size_t)adjusted_max_promo_bytes);
-
-    if (!result) {
-      // With promotion failure handling the test for the ability
-      // to support the promotion does not have to be guaranteed.
-      // Use an average of the amount promoted.
-      result = max_available() >= (size_t)
-        gc_stats()->avg_promoted()->padded_average();
-      if (PrintGC && Verbose && result) {
-        gclog_or_tty->print_cr(
-          "\nConcurrentMarkSweepGeneration::promotion_attempt_is_safe"
-          " max_available: " SIZE_FORMAT
-          " avg_promoted: " SIZE_FORMAT,
-          max_available(), (size_t)
-          gc_stats()->avg_promoted()->padded_average());
-      }
-    } else {
-      if (PrintGC && Verbose) {
-        gclog_or_tty->print_cr(
-          "\nConcurrentMarkSweepGeneration::promotion_attempt_is_safe"
-          " max_available: " SIZE_FORMAT
-          " adj_max_promo_bytes: " SIZE_FORMAT,
-          max_available(), (size_t)adjusted_max_promo_bytes);
-      }
-    }
-  } else {
-    if (PrintGC && Verbose) {
-      gclog_or_tty->print_cr(
-        "\nConcurrentMarkSweepGeneration::promotion_attempt_is_safe"
-        " contiguous_available: " SIZE_FORMAT
-        " adj_max_promo_bytes: " SIZE_FORMAT,
-        max_contiguous_available(), (size_t)adjusted_max_promo_bytes);
-    }
-  }
-  return result;
+  return res;
 }
 
 // At a promotion failure dump information on block layout in heap
@@ -1574,8 +1562,8 @@ bool CMSCollector::shouldConcurrentCollect() {
   GenCollectedHeap* gch = GenCollectedHeap::heap();
   assert(gch->collector_policy()->is_two_generation_policy(),
          "You may want to check the correctness of the following");
-  if (gch->incremental_collection_will_fail()) {
-    if (PrintGCDetails && Verbose) {
+  if (gch->incremental_collection_will_fail(true /* consult_young */)) {
+    if (Verbose && PrintGCDetails) {
       gclog_or_tty->print("CMSCollector: collect because incremental collection will fail ");
     }
     return true;
@@ -1939,7 +1927,7 @@ void CMSCollector::decide_foreground_collection_type(
          "You may want to check the correctness of the following");
   // Inform cms gen if this was due to partial collection failing.
   // The CMS gen may use this fact to determine its expansion policy.
-  if (gch->incremental_collection_will_fail()) {
+  if (gch->incremental_collection_will_fail(false /* don't consult_young */)) {
     assert(!_cmsGen->incremental_collection_failed(),
            "Should have been noticed, reacted to and cleared");
     _cmsGen->set_incremental_collection_failed();
@@ -1948,7 +1936,7 @@ void CMSCollector::decide_foreground_collection_type(
     UseCMSCompactAtFullCollection &&
     ((_full_gcs_since_conc_gc >= CMSFullGCsBeforeCompaction) ||
      GCCause::is_user_requested_gc(gch->gc_cause()) ||
-     gch->incremental_collection_will_fail());
+     gch->incremental_collection_will_fail(true /* consult_young */));
   *should_start_over = false;
   if (clear_all_soft_refs && !*should_compact) {
     // We are about to do a last ditch collection attempt
@@ -6091,23 +6079,14 @@ void CMSCollector::sweep(bool asynch) {
   assert(_collectorState == Resizing, "Change of collector state to"
     " Resizing must be done under the freelistLocks (plural)");
 
-  // Now that sweeping has been completed, if the GCH's
-  // incremental_collection_will_fail flag is set, clear it,
+  // Now that sweeping has been completed, we clear
+  // the incremental_collection_failed flag,
   // thus inviting a younger gen collection to promote into
   // this generation. If such a promotion may still fail,
   // the flag will be set again when a young collection is
   // attempted.
-  // I think the incremental_collection_will_fail flag's use
-  // is specific to a 2 generation collection policy, so i'll
-  // assert that that's the configuration we are operating within.
-  // The use of the flag can and should be generalized appropriately
-  // in the future to deal with a general n-generation system.
-
   GenCollectedHeap* gch = GenCollectedHeap::heap();
-  assert(gch->collector_policy()->is_two_generation_policy(),
-         "Resetting of incremental_collection_will_fail flag"
-         " may be incorrect otherwise");
-  gch->clear_incremental_collection_will_fail();
+  gch->clear_incremental_collection_failed();  // Worth retrying as fresh space may have been freed up
   gch->update_full_collections_completed(_collection_count_start);
 }
 
