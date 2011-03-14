@@ -200,8 +200,7 @@ public abstract class MethodImpl extends TypeComponentImpl implements Method {
     }
 
     // From interface Comparable
-    public int compareTo(Object object) {
-      Method method = (Method)object;
+    public int compareTo(Method method) {
         ReferenceTypeImpl declaringType = (ReferenceTypeImpl)declaringType();
          int rc = declaringType.compareTo(method.declaringType());
          if (rc == 0) {

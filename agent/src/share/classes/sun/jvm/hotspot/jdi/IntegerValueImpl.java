@@ -52,9 +52,8 @@ public class IntegerValueImpl extends PrimitiveValueImpl
         return intValue();
     }
 
-    public int compareTo(Object obj) {
-        int other = ((IntegerValue)obj).value();
-        return value() - other;
+    public int compareTo(IntegerValue integerVal) {
+        return value() - integerVal.value();
     }
 
     public Type type() {

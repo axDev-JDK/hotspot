@@ -67,8 +67,8 @@ public class LocalVariableImpl extends MirrorImpl
         return (int)method.hashCode() + slot();
     }
 
-    public int compareTo(Object object) {
-        LocalVariableImpl other = (LocalVariableImpl)object;
+    public int compareTo(LocalVariable localVar) {
+        LocalVariableImpl other = (LocalVariableImpl) localVar;
         int rc = method.compareTo(other.method);
         if (rc == 0) {
             rc = slot() - other.slot();

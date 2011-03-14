@@ -52,9 +52,8 @@ public class ShortValueImpl extends PrimitiveValueImpl
         return intValue();
     }
 
-    public int compareTo(Object obj) {
-        short other = ((ShortValue)obj).value();
-        return value() - other;
+    public int compareTo(ShortValue shortVal) {
+        return value() - shortVal.value();
     }
 
     public Type type() {

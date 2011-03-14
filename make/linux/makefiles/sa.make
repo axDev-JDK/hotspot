@@ -97,8 +97,8 @@ $(GENERATED)/sa-jdi.jar: $(AGENT_FILES1) $(AGENT_FILES2)
 	$(foreach file,$(AGENT_FILES1),$(shell echo $(file) >> $(AGENT_FILES1_LIST)))
 	$(foreach file,$(AGENT_FILES2),$(shell echo $(file) >> $(AGENT_FILES2_LIST)))
 	
-	$(QUIETLY) $(REMOTE) $(COMPILE.JAVAC) -source 1.4 -target 1.4 -classpath $(SA_CLASSPATH) -sourcepath $(AGENT_SRC_DIR) -d $(SA_CLASSDIR) @$(AGENT_FILES1_LIST)
-	$(QUIETLY) $(REMOTE) $(COMPILE.JAVAC) -source 1.4 -target 1.4 -classpath $(SA_CLASSPATH) -sourcepath $(AGENT_SRC_DIR) -d $(SA_CLASSDIR) @$(AGENT_FILES2_LIST)
+	$(QUIETLY) $(REMOTE) $(COMPILE.JAVAC) -classpath $(SA_CLASSPATH) -sourcepath $(AGENT_SRC_DIR) -d $(SA_CLASSDIR) @$(AGENT_FILES1_LIST)
+	$(QUIETLY) $(REMOTE) $(COMPILE.JAVAC) -classpath $(SA_CLASSPATH) -sourcepath $(AGENT_SRC_DIR) -d $(SA_CLASSDIR) @$(AGENT_FILES2_LIST)
 	
 	$(QUIETLY) $(REMOTE) $(COMPILE.RMIC)  -classpath $(SA_CLASSDIR) -d $(SA_CLASSDIR) sun.jvm.hotspot.debugger.remote.RemoteDebuggerServer
 	$(QUIETLY) echo "$(SA_BUILD_VERSION_PROP)" > $(SA_PROPERTIES)
