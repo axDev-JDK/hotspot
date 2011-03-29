@@ -204,13 +204,15 @@ mapfile_reorder : mapfile $(REORDERFILE)
 vm.def: $(Res_Files) $(Obj_Files)
 	sh $(GAMMADIR)/make/linux/makefiles/build_vm_def.sh *.o > $@
 
-ifeq ($(SHARK_BUILD), true)
-  STATIC_CXX = false
-else
-  ifeq ($(ZERO_LIBARCH), ppc64)
+ifeq ($(STATIC_CXX),)
+  ifeq ($(SHARK_BUILD), true)
     STATIC_CXX = false
   else
-    STATIC_CXX = true
+    ifeq ($(ZERO_LIBARCH), ppc64)
+      STATIC_CXX = false
+    else
+      STATIC_CXX = true
+    endif
   endif
 endif
 
