@@ -798,12 +798,11 @@ public class VirtualMachineImpl extends MirrorImpl implements PathSearchingVirtu
     }
 
     public String description() {
-        String[] versionParts = {"" + vmmgr.majorInterfaceVersion(),
-                                 "" + vmmgr.minorInterfaceVersion(),
-                                 name()};
         return java.text.MessageFormat.format(java.util.ResourceBundle.
                                               getBundle("com.sun.tools.jdi.resources.jdi").getString("version_format"),
-                                              versionParts);
+                                              "" + vmmgr.majorInterfaceVersion(),
+                                              "" + vmmgr.minorInterfaceVersion(),
+                                              name());
     }
 
     public String version() {

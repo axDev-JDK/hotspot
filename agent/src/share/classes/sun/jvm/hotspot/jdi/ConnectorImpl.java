@@ -186,7 +186,7 @@ abstract class ConnectorImpl implements Connector {
         // assert isVMVersionMismatch(throwable), "not a VMVersionMismatch"
         Class expClass = throwable.getClass();
         Method targetVersionMethod = expClass.getMethod("getTargetVersion", new Class[0]);
-        return (String) targetVersionMethod.invoke(throwable, null);
+        return (String) targetVersionMethod.invoke(throwable);
     }
 
     /** If the causal chain has a sun.jvm.hotspot.runtime.VMVersionMismatchException,

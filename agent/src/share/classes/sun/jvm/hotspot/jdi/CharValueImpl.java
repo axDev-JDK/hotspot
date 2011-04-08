@@ -52,9 +52,8 @@ public class CharValueImpl extends PrimitiveValueImpl
         return intValue();
     }
 
-    public int compareTo(Object obj) {
-        char other = ((CharValue)obj).value();
-        return value() - other;
+    public int compareTo(CharValue charVal) {
+        return value() - charVal.value();
     }
 
     public Type type() {

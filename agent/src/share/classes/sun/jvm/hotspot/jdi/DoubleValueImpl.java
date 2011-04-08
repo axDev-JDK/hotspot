@@ -45,8 +45,8 @@ public class DoubleValueImpl extends PrimitiveValueImpl
         }
     }
 
-    public int compareTo(Object obj) {
-        double other = ((DoubleValue)obj).value();
+    public int compareTo(DoubleValue doubleVal) {
+        double other = doubleVal.value();
         if (value() < other) {
             return -1;
         } else if (value() == other) {

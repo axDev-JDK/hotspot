@@ -52,11 +52,9 @@ public class ByteValueImpl extends PrimitiveValueImpl
         return intValue();
     }
 
-    public int compareTo(Object obj) {
-        byte other = ((ByteValue)obj).value();
-        return value() - other;
+    public int compareTo(ByteValue byteVal) {
+        return value() - byteVal.value();
     }
-
 
     public Type type() {
         return vm.theByteType();

@@ -55,7 +55,7 @@ public class HelloWorld {
     synchronized(lock) {
       if (useMethodInvoke) {
         try {
-          Method method = HelloWorld.class.getMethod("e", null);
+          Method method = HelloWorld.class.getMethod("e");
           Integer result = (Integer) method.invoke(null, new Object[0]);
           return result.intValue();
         }

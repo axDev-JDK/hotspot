@@ -52,8 +52,8 @@ public class FloatValueImpl extends PrimitiveValueImpl
         return intValue();
     }
 
-    public int compareTo(Object obj) {
-        float other = ((FloatValue)obj).value();
+    public int compareTo(FloatValue floatVal) {
+        float other = floatVal.value();
         if (value() < other) {
             return -1;
         } else if (value() == other) {
