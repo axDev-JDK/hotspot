@@ -214,7 +214,7 @@ protected:
       signal_out_of_memory(request, whence);
     }
  }
-+
+
  public:
   Arena();
   Arena(size_t init_size);
