@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -677,25 +677,6 @@ void klassVtable::oop_update_pointers(ParCompactionManager* cm) {
     PSParallelCompact::adjust_pointer(adr_method_at(i));
   }
 }
-
-void klassVtable::oop_update_pointers(ParCompactionManager* cm,
-                                      HeapWord* beg_addr, HeapWord* end_addr) {
-  const int n = length();
-  const int entry_size = vtableEntry::size();
-
-  int beg_idx = 0;
-  HeapWord* const method_0 = (HeapWord*)adr_method_at(0);
-  if (beg_addr > method_0) {
-    // it's safe to use cast, as we have guarantees on vtable size to be sane
-    beg_idx = int((pointer_delta(beg_addr, method_0) + entry_size - 1) / entry_size);
-  }
-
-  oop* const beg_oop = adr_method_at(beg_idx);
-  oop* const end_oop = MIN2((oop*)end_addr, adr_method_at(n));
-  for (oop* cur_oop = beg_oop; cur_oop < end_oop; cur_oop += entry_size) {
-    PSParallelCompact::adjust_pointer(cur_oop);
-  }
-}
 #endif // SERIALGC
 
 // Iterators
@@ -820,25 +801,6 @@ void klassItable::oop_update_pointers(ParCompactionManager* cm) {
     ime++;
   }
 }
-
-void klassItable::oop_update_pointers(ParCompactionManager* cm,
-                                      HeapWord* beg_addr, HeapWord* end_addr) {
-  // offset table
-  itableOffsetEntry* ioe = offset_entry(0);
-  for(int i = 0; i < _size_offset_table; i++) {
-    oop* p = (oop*)&ioe->_interface;
-    PSParallelCompact::adjust_pointer(p, beg_addr, end_addr);
-    ioe++;
-  }
-
-  // method table
-  itableMethodEntry* ime = method_entry(0);
-  for(int j = 0; j < _size_method_table; j++) {
-    oop* p = (oop*)&ime->_method;
-    PSParallelCompact::adjust_pointer(p, beg_addr, end_addr);
-    ime++;
-  }
-}
 #endif // SERIALGC
 
 // Iterators
@@ -921,7 +883,7 @@ void klassItable::initialize_itable_for_interface(int method_table_offset, Klass
   int ime_num = 0;
 
   // Skip first methodOop if it is a class initializer
-  int i = ((methodOop)methods()->obj_at(0))->name() != vmSymbols::class_initializer_name() ? 0 : 1;
+  int i = ((methodOop)methods()->obj_at(0))->is_static_initializer() ? 1 : 0;
 
   // m, method_name, method_signature, klass reset each loop so they
   // don't need preserving across check_signature_loaders call
@@ -1133,7 +1095,7 @@ void klassItable::setup_itable_offset_table(instanceKlassHandle klass) {
   itableOffsetEntry* ioe = (itableOffsetEntry*)klass->start_of_itable();
   itableMethodEntry* ime = (itableMethodEntry*)(ioe + nof_interfaces);
   intptr_t* end               = klass->end_of_itable();
-  assert((oop*)(ime + nof_methods) <= (oop*)klass->start_of_static_fields(), "wrong offset calculation (1)");
+  assert((oop*)(ime + nof_methods) <= (oop*)klass->start_of_nonstatic_oop_maps(), "wrong offset calculation (1)");
   assert((oop*)(end) == (oop*)(ime + nof_methods),                      "wrong offset calculation (2)");
 
   // Visit all interfaces and initialize itable offset table
@@ -1159,7 +1121,7 @@ int klassItable::compute_itable_index(methodOop m) {
     assert(index < methods->length(), "should find index for resolve_invoke");
   }
   // Adjust for <clinit>, which is left out of table if first method
-  if (methods->length() > 0 && ((methodOop)methods->obj_at(0))->name() == vmSymbols::class_initializer_name()) {
+  if (methods->length() > 0 && ((methodOop)methods->obj_at(0))->is_static_initializer()) {
     index--;
   }
   return index;
@@ -1173,7 +1135,7 @@ methodOop klassItable::method_for_itable_index(klassOop intf, int itable_index) 
 
   int index = itable_index;
   // Adjust for <clinit>, which is left out of table if first method
-  if (methods->length() > 0 && ((methodOop)methods->obj_at(0))->name() == vmSymbols::class_initializer_name()) {
+  if (methods->length() > 0 && ((methodOop)methods->obj_at(0))->is_static_initializer()) {
     index++;
   }
 

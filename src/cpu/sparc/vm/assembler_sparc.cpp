@@ -2407,14 +2407,23 @@ void MacroAssembler::lcmp( Register Ra, Register Rb, Register Rresult) {
 #endif
 
 
-void MacroAssembler::load_sized_value(Address src, Register dst,
-                                      size_t size_in_bytes, bool is_signed) {
+void MacroAssembler::load_sized_value(Address src, Register dst, size_t size_in_bytes, bool is_signed) {
   switch (size_in_bytes) {
-  case  8: ldx(src, dst); break;
-  case  4: ld( src, dst); break;
-  case  2: is_signed ? ldsh(src, dst) : lduh(src, dst); break;
-  case  1: is_signed ? ldsb(src, dst) : ldub(src, dst); break;
-  default: ShouldNotReachHere();
+  case  8:  ld_long(src, dst); break;
+  case  4:  ld(     src, dst); break;
+  case  2:  is_signed ? ldsh(src, dst) : lduh(src, dst); break;
+  case  1:  is_signed ? ldsb(src, dst) : ldub(src, dst); break;
+  default:  ShouldNotReachHere();
+  }
+}
+
+void MacroAssembler::store_sized_value(Register src, Address dst, size_t size_in_bytes) {
+  switch (size_in_bytes) {
+  case  8:  st_long(src, dst); break;
+  case  4:  st(     src, dst); break;
+  case  2:  sth(    src, dst); break;
+  case  1:  stb(    src, dst); break;
+  default:  ShouldNotReachHere();
   }
 }
 
@@ -3170,7 +3179,7 @@ void MacroAssembler::check_method_handle_type(Register mtype_reg, Register mh_re
                                               Label& wrong_method_type) {
   assert_different_registers(mtype_reg, mh_reg, temp_reg);
   // compare method type against that of the receiver
-  RegisterOrConstant mhtype_offset = delayed_value(java_dyn_MethodHandle::type_offset_in_bytes, temp_reg);
+  RegisterOrConstant mhtype_offset = delayed_value(java_lang_invoke_MethodHandle::type_offset_in_bytes, temp_reg);
   load_heap_oop(mh_reg, mhtype_offset, temp_reg);
   cmp(temp_reg, mtype_reg);
   br(Assembler::notEqual, false, Assembler::pn, wrong_method_type);
@@ -3186,14 +3195,14 @@ void MacroAssembler::load_method_handle_vmslots(Register vmslots_reg, Register m
                                                 Register temp_reg) {
   assert_different_registers(vmslots_reg, mh_reg, temp_reg);
   // load mh.type.form.vmslots
-  if (java_dyn_MethodHandle::vmslots_offset_in_bytes() != 0) {
+  if (java_lang_invoke_MethodHandle::vmslots_offset_in_bytes() != 0) {
     // hoist vmslots into every mh to avoid dependent load chain
-    ld(           Address(mh_reg,    delayed_value(java_dyn_MethodHandle::vmslots_offset_in_bytes, temp_reg)),   vmslots_reg);
+    ld(           Address(mh_reg,    delayed_value(java_lang_invoke_MethodHandle::vmslots_offset_in_bytes, temp_reg)),   vmslots_reg);
   } else {
     Register temp2_reg = vmslots_reg;
-    load_heap_oop(Address(mh_reg,    delayed_value(java_dyn_MethodHandle::type_offset_in_bytes, temp_reg)),      temp2_reg);
-    load_heap_oop(Address(temp2_reg, delayed_value(java_dyn_MethodType::form_offset_in_bytes, temp_reg)),        temp2_reg);
-    ld(           Address(temp2_reg, delayed_value(java_dyn_MethodTypeForm::vmslots_offset_in_bytes, temp_reg)), vmslots_reg);
+    load_heap_oop(Address(mh_reg,    delayed_value(java_lang_invoke_MethodHandle::type_offset_in_bytes, temp_reg)),      temp2_reg);
+    load_heap_oop(Address(temp2_reg, delayed_value(java_lang_invoke_MethodType::form_offset_in_bytes, temp_reg)),        temp2_reg);
+    ld(           Address(temp2_reg, delayed_value(java_lang_invoke_MethodTypeForm::vmslots_offset_in_bytes, temp_reg)), vmslots_reg);
   }
 }
 
@@ -3204,7 +3213,7 @@ void MacroAssembler::jump_to_method_handle_entry(Register mh_reg, Register temp_
 
   // pick out the interpreted side of the handler
   // NOTE: vmentry is not an oop!
-  ld_ptr(mh_reg, delayed_value(java_dyn_MethodHandle::vmentry_offset_in_bytes, temp_reg), temp_reg);
+  ld_ptr(mh_reg, delayed_value(java_lang_invoke_MethodHandle::vmentry_offset_in_bytes, temp_reg), temp_reg);
 
   // off we go...
   ld_ptr(temp_reg, MethodHandleEntry::from_interpreted_entry_offset_in_bytes(), temp_reg);

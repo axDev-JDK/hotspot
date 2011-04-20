@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,10 @@
 #include "oops/typeArrayKlass.hpp"
 #include "runtime/handles.inline.hpp"
 #ifndef SERIALGC
+#include "gc_implementation/parNew/parOopClosures.inline.hpp"
+#include "gc_implementation/parallelScavenge/psPromotionManager.inline.hpp"
+#include "gc_implementation/parallelScavenge/psScavenge.inline.hpp"
+#include "memory/cardTableRS.hpp"
 #include "oops/oop.pcgc.inline.hpp"
 #endif
 
@@ -175,6 +179,12 @@ int klassKlass::oop_adjust_pointers(oop obj) {
 
 #ifndef SERIALGC
 void klassKlass::oop_push_contents(PSPromotionManager* pm, oop obj) {
+  Klass* k = Klass::cast(klassOop(obj));
+
+  oop* p = k->adr_java_mirror();
+  if (PSScavenge::should_scavenge(p)) {
+    pm->claim_or_forward_depth(p);
+  }
 }
 
 int klassKlass::oop_update_pointers(ParCompactionManager* cm, oop obj) {
@@ -182,19 +192,6 @@ int klassKlass::oop_update_pointers(ParCompactionManager* cm, oop obj) {
 
   oop* const beg_oop = k->oop_block_beg();
   oop* const end_oop = k->oop_block_end();
-  for (oop* cur_oop = beg_oop; cur_oop < end_oop; ++cur_oop) {
-    PSParallelCompact::adjust_pointer(cur_oop);
-  }
-
-  return oop_size(obj);
-}
-
-int klassKlass::oop_update_pointers(ParCompactionManager* cm, oop obj,
-                                    HeapWord* beg_addr, HeapWord* end_addr) {
-  Klass* k = Klass::cast(klassOop(obj));
-
-  oop* const beg_oop = MAX2((oop*)beg_addr, k->oop_block_beg());
-  oop* const end_oop = MIN2((oop*)end_addr, k->oop_block_end());
   for (oop* cur_oop = beg_oop; cur_oop < end_oop; ++cur_oop) {
     PSParallelCompact::adjust_pointer(cur_oop);
   }
@@ -246,7 +243,7 @@ void klassKlass::oop_verify_on(oop obj, outputStream* st) {
 
   if (k->java_mirror() != NULL || (k->oop_is_instance() && instanceKlass::cast(klassOop(obj))->is_loaded())) {
     guarantee(k->java_mirror() != NULL,          "should be allocated");
-    guarantee(k->java_mirror()->is_perm(),       "should be in permspace");
+    guarantee(k->java_mirror()->is_perm() || !JavaObjectsInPerm,       "should be in permspace");
     guarantee(k->java_mirror()->is_instance(),   "should be instance");
   }
 }

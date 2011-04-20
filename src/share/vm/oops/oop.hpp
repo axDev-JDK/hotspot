@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,6 +71,11 @@ class oopDesc {
   static BarrierSet* _bs;
 
  public:
+  enum ConcSafeType {
+    IsUnsafeConc = false,
+    IsSafeConc   = true
+  };
+
   markOop  mark() const         { return _mark; }
   markOop* mark_addr() const    { return (markOop*) &_mark; }
 
@@ -124,6 +129,7 @@ class oopDesc {
 
   // type test operations (inlined in oop.inline.h)
   bool is_instance()           const;
+  bool is_instanceMirror()     const;
   bool is_instanceRef()        const;
   bool is_array()              const;
   bool is_objArray()           const;
@@ -317,13 +323,6 @@ class oopDesc {
 
   // Parallel Old
   void update_contents(ParCompactionManager* cm);
-  void update_contents(ParCompactionManager* cm,
-                       HeapWord* begin_limit,
-                       HeapWord* end_limit);
-  void update_contents(ParCompactionManager* cm,
-                       klassOop old_klass,
-                       HeapWord* begin_limit,
-                       HeapWord* end_limit);
 
   void follow_contents(ParCompactionManager* cm);
   void follow_header(ParCompactionManager* cm);
@@ -364,7 +363,6 @@ class oopDesc {
 #ifndef SERIALGC
   // Parallel old
   void update_header();
-  void update_header(HeapWord* beg_addr, HeapWord* end_addr);
 #endif // SERIALGC
 
   // mark-sweep support

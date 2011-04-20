@@ -23,6 +23,7 @@
  */
 
 #include "precompiled.hpp"
+#include "asm/assembler.hpp"
 #include "interpreter/interpreter.hpp"
 #include "interpreter/interpreterRuntime.hpp"
 #include "interpreter/templateTable.hpp"
@@ -391,8 +392,8 @@ void TemplateTable::ldc(bool wide) {
 void TemplateTable::fast_aldc(bool wide) {
   transition(vtos, atos);
 
-  if (!EnableMethodHandles) {
-    // We should not encounter this bytecode if !EnableMethodHandles.
+  if (!EnableInvokeDynamic) {
+    // We should not encounter this bytecode if !EnableInvokeDynamic.
     // The verifier will stop it.  However, if we get past the verifier,
     // this will stop the thread in a reasonable way, without crashing the JVM.
     __ call_VM(noreg, CAST_FROM_FN_PTR(address,
@@ -1710,39 +1711,6 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
       __ pop(rdi);                               // get return address
       __ mov(rsp, rdx);                          // set sp to sender sp
 
-
-      Label skip;
-      Label chkint;
-
-      // The interpreter frame we have removed may be returning to
-      // either the callstub or the interpreter. Since we will
-      // now be returning from a compiled (OSR) nmethod we must
-      // adjust the return to the return were it can handler compiled
-      // results and clean the fpu stack. This is very similar to
-      // what a i2c adapter must do.
-
-      // Are we returning to the call stub?
-
-      __ cmp32(rdi, ExternalAddress(StubRoutines::_call_stub_return_address));
-      __ jcc(Assembler::notEqual, chkint);
-
-      // yes adjust to the specialized call stub  return.
-      assert(StubRoutines::x86::get_call_stub_compiled_return() != NULL, "must be set");
-      __ lea(rdi, ExternalAddress(StubRoutines::x86::get_call_stub_compiled_return()));
-      __ jmp(skip);
-
-      __ bind(chkint);
-
-      // Are we returning to the interpreter? Look for sentinel
-
-      __ cmpl(Address(rdi, -2*wordSize), Interpreter::return_sentinel);
-      __ jcc(Assembler::notEqual, skip);
-
-      // Adjust to compiled return back to interpreter
-
-      __ movptr(rdi, Address(rdi, -wordSize));
-      __ bind(skip);
-
       // Align stack pointer for compiled code (note that caller is
       // responsible for undoing this fixup by remembering the old SP
       // in an rbp,-relative location)
@@ -1972,18 +1940,10 @@ void TemplateTable::fast_binaryswitch() {
     __ movl(temp, Address(array, h, Address::times_8, 0*wordSize));
     __ bswapl(temp);
     __ cmpl(key, temp);
-    if (VM_Version::supports_cmov()) {
-      __ cmovl(Assembler::less        , j, h);   // j = h if (key <  array[h].fast_match())
-      __ cmovl(Assembler::greaterEqual, i, h);   // i = h if (key >= array[h].fast_match())
-    } else {
-      Label set_i, end_of_if;
-      __ jccb(Assembler::greaterEqual, set_i);     // {
-      __ mov(j, h);                                //   j = h;
-      __ jmp(end_of_if);                           // }
-      __ bind(set_i);                              // else {
-      __ mov(i, h);                                //   i = h;
-      __ bind(end_of_if);                          // }
-    }
+    // j = h if (key <  array[h].fast_match())
+    __ cmov32(Assembler::less        , j, h);
+    // i = h if (key >= array[h].fast_match())
+    __ cmov32(Assembler::greaterEqual, i, h);
     // while (i+1 < j)
     __ bind(entry);
     __ leal(h, Address(i, 1));                   // i+1
@@ -3143,7 +3103,7 @@ void TemplateTable::invokedynamic(int byte_no) {
     __ profile_call(rsi);
   }
 
-  __ movptr(rcx_method_handle, Address(rax_callsite, __ delayed_value(java_dyn_CallSite::target_offset_in_bytes, rcx)));
+  __ movptr(rcx_method_handle, Address(rax_callsite, __ delayed_value(java_lang_invoke_CallSite::target_offset_in_bytes, rcx)));
   __ null_check(rcx_method_handle);
   __ prepare_to_jump_from_interpreted();
   __ jump_to_method_handle_entry(rcx_method_handle, rdx);
@@ -3511,22 +3471,14 @@ void TemplateTable::monitorenter() {
 
   // find a free slot in the monitor block (result in rdx)
   { Label entry, loop, exit;
-    __ movptr(rcx, monitor_block_top);            // points to current entry, starting with top-most entry
-    __ lea(rbx, monitor_block_bot);               // points to word before bottom of monitor block
+    __ movptr(rcx, monitor_block_top);           // points to current entry, starting with top-most entry
+
+    __ lea(rbx, monitor_block_bot);              // points to word before bottom of monitor block
     __ jmpb(entry);
 
     __ bind(loop);
     __ cmpptr(Address(rcx, BasicObjectLock::obj_offset_in_bytes()), (int32_t)NULL_WORD);  // check if current entry is used
-
-// TODO - need new func here - kbt
-    if (VM_Version::supports_cmov()) {
-      __ cmov(Assembler::equal, rdx, rcx);       // if not used then remember entry in rdx
-    } else {
-      Label L;
-      __ jccb(Assembler::notEqual, L);
-      __ mov(rdx, rcx);                          // if not used then remember entry in rdx
-      __ bind(L);
-    }
+    __ cmovptr(Assembler::equal, rdx, rcx);      // if not used then remember entry in rdx
     __ cmpptr(rax, Address(rcx, BasicObjectLock::obj_offset_in_bytes()));   // check if current entry is for same object
     __ jccb(Assembler::equal, exit);             // if same object then stop searching
     __ addptr(rcx, entry_size);                  // otherwise advance to next entry

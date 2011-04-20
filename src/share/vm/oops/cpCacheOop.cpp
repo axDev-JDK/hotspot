@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,15 +98,15 @@ void ConstantPoolCacheEntry::set_bytecode_2(Bytecodes::Code code) {
 // Atomically sets f1 if it is still NULL, otherwise it keeps the
 // current value.
 void ConstantPoolCacheEntry::set_f1_if_null_atomic(oop f1) {
-    // Use barriers as in oop_store
-    HeapWord* f1_addr = (HeapWord*) &_f1;
-    update_barrier_set_pre(f1_addr, f1);
-    void* result = Atomic::cmpxchg_ptr(f1, f1_addr, NULL);
-    bool success = (result == NULL);
-    if (success) {
-      update_barrier_set((void*) f1_addr, f1);
-    }
+  // Use barriers as in oop_store
+  oop* f1_addr = (oop*) &_f1;
+  update_barrier_set_pre(f1_addr, f1);
+  void* result = Atomic::cmpxchg_ptr(f1, f1_addr, NULL);
+  bool success = (result == NULL);
+  if (success) {
+    update_barrier_set(f1_addr, f1);
   }
+}
 
 #ifdef ASSERT
 // It is possible to have two different dummy methodOops created
@@ -133,7 +133,7 @@ void ConstantPoolCacheEntry::set_field(Bytecodes::Code get_code,
                                        TosState field_type,
                                        bool is_final,
                                        bool is_volatile) {
-  set_f1(field_holder());
+  set_f1(field_holder()->java_mirror());
   set_f2(field_offset);
   // The field index is used by jvm/ti and is the index into fields() array
   // in holder instanceKlass.  This is scaled by instanceKlass::next_offset.
@@ -366,16 +366,6 @@ void ConstantPoolCacheEntry::update_pointers() {
   PSParallelCompact::adjust_pointer((oop*)&_f1);
   if (is_vfinal()) {
     PSParallelCompact::adjust_pointer((oop*)&_f2);
-  }
-}
-
-void ConstantPoolCacheEntry::update_pointers(HeapWord* beg_addr,
-                                             HeapWord* end_addr) {
-  assert(in_words(size()) == 4, "check code below - may need adjustment");
-  // field[1] is always oop or NULL
-  PSParallelCompact::adjust_pointer((oop*)&_f1, beg_addr, end_addr);
-  if (is_vfinal()) {
-    PSParallelCompact::adjust_pointer((oop*)&_f2, beg_addr, end_addr);
   }
 }
 #endif // SERIALGC

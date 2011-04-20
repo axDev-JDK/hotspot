@@ -1084,7 +1084,10 @@ bool VM_RedefineClasses::merge_constant_pools(constantPoolHandle old_cp,
       jbyte old_tag = old_cp->tag_at(old_i).value();
       switch (old_tag) {
       case JVM_CONSTANT_Class:
+      case JVM_CONSTANT_UnresolvedClass:
         // revert the copy to JVM_CONSTANT_UnresolvedClass
+        // May be resolving while calling this so do the same for
+        // JVM_CONSTANT_UnresolvedClass (klass_name_at() deals with transition)
         (*merge_cp_p)->unresolved_klass_at_put(old_i,
           old_cp->klass_name_at(old_i));
         break;
@@ -1247,12 +1250,12 @@ jvmtiError VM_RedefineClasses::merge_cp_and_rewrite(
   // Constant pools are not easily reused so we allocate a new one
   // each time.
   // merge_cp is created unsafe for concurrent GC processing.  It
-  // should be marked safe before discarding it because, even if
-  // garbage.  If it crosses a card boundary, it may be scanned
+  // should be marked safe before discarding it. Even though
+  // garbage,  if it crosses a card boundary, it may be scanned
   // in order to find the start of the first complete object on the card.
   constantPoolHandle merge_cp(THREAD,
     oopFactory::new_constantPool(merge_cp_length,
-                                 methodOopDesc::IsUnsafeConc,
+                                 oopDesc::IsUnsafeConc,
                                  THREAD));
   int orig_length = old_cp->orig_length();
   if (orig_length == 0) {
@@ -2343,7 +2346,7 @@ void VM_RedefineClasses::set_new_constant_pool(
     // sized constant pool with the klass to save space.
     constantPoolHandle smaller_cp(THREAD,
       oopFactory::new_constantPool(scratch_cp_length,
-                                   methodOopDesc::IsUnsafeConc,
+                                   oopDesc::IsUnsafeConc,
                                    THREAD));
     // preserve orig_length() value in the smaller copy
     int orig_length = scratch_cp->orig_length();
@@ -3347,11 +3350,12 @@ void VM_RedefineClasses::increment_class_counter(instanceKlass *ik, TRAPS) {
 
   for (Klass *subk = ik->subklass(); subk != NULL;
        subk = subk->next_sibling()) {
-    klassOop sub = subk->as_klassOop();
-    instanceKlass *subik = (instanceKlass *)sub->klass_part();
-
-    // recursively do subclasses of the current subclass
-    increment_class_counter(subik, THREAD);
+    if (subk->oop_is_instance()) {
+      // Only update instanceKlasses
+      instanceKlass *subik = (instanceKlass*)subk;
+      // recursively do subclasses of the current subclass
+      increment_class_counter(subik, THREAD);
+    }
   }
 }
 

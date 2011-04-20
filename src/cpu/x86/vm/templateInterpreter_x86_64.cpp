@@ -190,13 +190,7 @@ address TemplateInterpreterGenerator::generate_continuation_for(TosState state) 
 }
 
 
-address TemplateInterpreterGenerator::generate_return_entry_for(TosState state,
-                                                                int step) {
-
-  // amd64 doesn't need to do anything special about compiled returns
-  // to the interpreter so the code that exists on x86 to place a sentinel
-  // here and the specialized cleanup code is not needed here.
-
+address TemplateInterpreterGenerator::generate_return_entry_for(TosState state, int step) {
   address entry = __ pc();
 
   // Restore stack bottom in case i2c adjusted stack
@@ -1547,7 +1541,7 @@ int AbstractInterpreter::layout_activation(methodOop method,
          tempcount* Interpreter::stackElementWords + popframe_extra_args;
   if (interpreter_frame != NULL) {
 #ifdef ASSERT
-    if (!EnableMethodHandles)
+    if (!EnableInvokeDynamic)
       // @@@ FIXME: Should we correct interpreter_frame_sender_sp in the calling sequences?
       // Probably, since deoptimization doesn't work yet.
       assert(caller->unextended_sp() == interpreter_frame->interpreter_frame_sender_sp(), "Frame not properly walkable");

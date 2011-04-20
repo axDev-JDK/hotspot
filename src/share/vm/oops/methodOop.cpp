@@ -466,7 +466,20 @@ bool methodOopDesc::is_accessor() const {
 
 
 bool methodOopDesc::is_initializer() const {
-  return name() == vmSymbols::object_initializer_name() || name() == vmSymbols::class_initializer_name();
+  return name() == vmSymbols::object_initializer_name() || is_static_initializer();
+}
+
+bool methodOopDesc::has_valid_initializer_flags() const {
+  return (is_static() ||
+          instanceKlass::cast(method_holder())->major_version() < 51);
+}
+
+bool methodOopDesc::is_static_initializer() const {
+  // For classfiles version 51 or greater, ensure that the clinit method is
+  // static.  Non-static methods with the name "<clinit>" are not static
+  // initializers. (older classfiles exempted for backward compatibility)
+  return name() == vmSymbols::class_initializer_name() &&
+         has_valid_initializer_flags();
 }
 
 
@@ -842,7 +855,7 @@ bool methodOopDesc::is_method_handle_invoke_name(vmSymbols::SID name_sid) {
   case vmSymbols::VM_SYMBOL_ENUM_NAME(invokeGeneric_name):
     return true;
   }
-  if (AllowTransitionalJSR292
+  if ((AllowTransitionalJSR292 || AllowInvokeForInvokeGeneric)
       && name_sid == vmSymbols::VM_SYMBOL_ENUM_NAME(invoke_name))
     return true;
   return false;
@@ -852,7 +865,7 @@ bool methodOopDesc::is_method_handle_invoke_name(vmSymbols::SID name_sid) {
 enum {
   _imcp_invoke_name = 1,        // utf8: 'invokeExact' or 'invokeGeneric'
   _imcp_invoke_signature,       // utf8: (variable Symbol*)
-  _imcp_method_type_value,      // string: (variable java/dyn/MethodType, sic)
+  _imcp_method_type_value,      // string: (variable java/lang/invoke/MethodType, sic)
   _imcp_limit
 };
 
@@ -985,9 +998,11 @@ methodHandle methodOopDesc:: clone_with_new_data(methodHandle m, u_char* new_cod
                                               IsUnsafeConc,
                                               CHECK_(methodHandle()));
   methodHandle newm (THREAD, newm_oop);
+  NOT_PRODUCT(int nmsz = newm->is_parsable() ? newm->size() : -1;)
   int new_method_size = newm->method_size();
   // Create a shallow copy of methodOopDesc part, but be careful to preserve the new constMethodOop
   constMethodOop newcm = newm->constMethod();
+  NOT_PRODUCT(int ncmsz = newcm->is_parsable() ? newcm->size() : -1;)
   int new_const_method_size = newm->constMethod()->object_size();
 
   memcpy(newm(), m(), sizeof(methodOopDesc));
@@ -999,9 +1014,19 @@ methodHandle methodOopDesc:: clone_with_new_data(methodHandle m, u_char* new_cod
   // or concurrent marking but those phases will be correct.  Setting and
   // resetting is done in preference to a careful copying into newcm to
   // avoid having to know the precise layout of a constMethodOop.
-  m->constMethod()->set_is_conc_safe(false);
+  m->constMethod()->set_is_conc_safe(oopDesc::IsUnsafeConc);
+  assert(m->constMethod()->is_parsable(), "Should remain parsable");
+
+  // NOTE: this is a reachable object that transiently signals "conc_unsafe"
+  // However, no allocations are done during this window
+  // during which it is tagged conc_unsafe, so we are assured that any concurrent
+  // thread will not wait forever for the object to revert to "conc_safe".
+  // Further, any such conc_unsafe object will indicate a stable size
+  // through the transition.
   memcpy(newcm, m->constMethod(), sizeof(constMethodOopDesc));
-  m->constMethod()->set_is_conc_safe(true);
+  m->constMethod()->set_is_conc_safe(oopDesc::IsSafeConc);
+  assert(m->constMethod()->is_parsable(), "Should remain parsable");
+
   // Reset correct method/const method, method size, and parameter info
   newcm->set_method(newm());
   newm->set_constMethod(newcm);
@@ -1035,6 +1060,8 @@ methodHandle methodOopDesc:: clone_with_new_data(methodHandle m, u_char* new_cod
 
   // Only set is_conc_safe to true when changes to newcm are
   // complete.
+  assert(!newm->is_parsable()  || nmsz  < 0 || newm->size()  == nmsz,  "newm->size()  inconsistency");
+  assert(!newcm->is_parsable() || ncmsz < 0 || newcm->size() == ncmsz, "newcm->size() inconsistency");
   newcm->set_is_conc_safe(true);
   return newm;
 }
@@ -1064,7 +1091,8 @@ void methodOopDesc::init_intrinsic_id() {
   vmSymbols::SID  name_id = vmSymbols::find_sid(name());
   if (name_id == vmSymbols::NO_SID)  return;
   vmSymbols::SID   sig_id = vmSymbols::find_sid(signature());
-  if (klass_id != vmSymbols::VM_SYMBOL_ENUM_NAME(java_dyn_MethodHandle)
+  if (klass_id != vmSymbols::VM_SYMBOL_ENUM_NAME(java_lang_invoke_MethodHandle)
+      && !(klass_id == vmSymbols::VM_SYMBOL_ENUM_NAME(java_dyn_MethodHandle) && AllowTransitionalJSR292)
       && sig_id == vmSymbols::NO_SID)  return;
   jshort flags = access_flags().as_short();
 
@@ -1090,7 +1118,8 @@ void methodOopDesc::init_intrinsic_id() {
     break;
 
   // Signature-polymorphic methods: MethodHandle.invoke*, InvokeDynamic.*.
-  case vmSymbols::VM_SYMBOL_ENUM_NAME(java_dyn_MethodHandle):
+  case vmSymbols::VM_SYMBOL_ENUM_NAME(java_dyn_MethodHandle):  // AllowTransitionalJSR292 ONLY
+  case vmSymbols::VM_SYMBOL_ENUM_NAME(java_lang_invoke_MethodHandle):
     if (is_static() || !is_native())  break;
     switch (name_id) {
     case vmSymbols::VM_SYMBOL_ENUM_NAME(invokeGeneric_name):
@@ -1100,11 +1129,12 @@ void methodOopDesc::init_intrinsic_id() {
       id = vmIntrinsics::_invokeExact;
       break;
     case vmSymbols::VM_SYMBOL_ENUM_NAME(invoke_name):
-      if (AllowTransitionalJSR292)  id = vmIntrinsics::_invokeExact;
+      if (AllowInvokeForInvokeGeneric)   id = vmIntrinsics::_invokeGeneric;
+      else if (AllowTransitionalJSR292)  id = vmIntrinsics::_invokeExact;
       break;
     }
     break;
-  case vmSymbols::VM_SYMBOL_ENUM_NAME(java_dyn_InvokeDynamic):
+  case vmSymbols::VM_SYMBOL_ENUM_NAME(java_lang_invoke_InvokeDynamic):
     if (!is_static() || !is_native())  break;
     id = vmIntrinsics::_invokeDynamic;
     break;
@@ -1372,7 +1402,7 @@ void CompressedLineNumberWriteStream::write_pair_regular(int bci_delta, int line
 }
 
 // See comment in methodOop.hpp which explains why this exists.
-#if defined(_M_AMD64) && MSC_VER >= 1400
+#if defined(_M_AMD64) && _MSC_VER >= 1400
 #pragma optimize("", off)
 void CompressedLineNumberWriteStream::write_pair(int bci, int line) {
   write_pair_inline(bci, line);

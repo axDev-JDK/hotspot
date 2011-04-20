@@ -743,6 +743,9 @@ void Node::add_req_batch( Node *n, uint m ) {
 //------------------------------del_req----------------------------------------
 // Delete the required edge and compact the edge array
 void Node::del_req( uint idx ) {
+  assert( idx < _cnt, "oob");
+  assert( !VerifyHashTableKeys || _hash_lock == 0,
+          "remove node from hash table before modifying it");
   // First remove corresponding def-use edge
   Node *n = in(idx);
   if (n != NULL) n->del_out((Node *)this);
@@ -1370,12 +1373,12 @@ static inline bool NotANode(const Node* n) {
 //------------------------------find------------------------------------------
 // Find a neighbor of this Node with the given _idx
 // If idx is negative, find its absolute value, following both _in and _out.
-static void find_recur( Node* &result, Node *n, int idx, bool only_ctrl,
-                        VectorSet &old_space, VectorSet &new_space ) {
+static void find_recur(Compile* C,  Node* &result, Node *n, int idx, bool only_ctrl,
+                        VectorSet* old_space, VectorSet* new_space ) {
   int node_idx = (idx >= 0) ? idx : -idx;
   if (NotANode(n))  return;  // Gracefully handle NULL, -1, 0xabababab, etc.
-  // Contained in new_space or old_space?
-  VectorSet *v = Compile::current()->node_arena()->contains(n) ? &new_space : &old_space;
+  // Contained in new_space or old_space?   Check old_arena first since it's mostly empty.
+  VectorSet *v = C->old_arena()->contains(n) ? old_space : new_space;
   if( v->test(n->_idx) ) return;
   if( (int)n->_idx == node_idx
       debug_only(|| n->debug_idx() == node_idx) ) {
@@ -1387,19 +1390,23 @@ static void find_recur( Node* &result, Node *n, int idx, bool only_ctrl,
   v->set(n->_idx);
   for( uint i=0; i<n->len(); i++ ) {
     if( only_ctrl && !(n->is_Region()) && (n->Opcode() != Op_Root) && (i != TypeFunc::Control) ) continue;
-    find_recur( result, n->in(i), idx, only_ctrl, old_space, new_space );
+    find_recur(C, result, n->in(i), idx, only_ctrl, old_space, new_space );
   }
   // Search along forward edges also:
   if (idx < 0 && !only_ctrl) {
     for( uint j=0; j<n->outcnt(); j++ ) {
-      find_recur( result, n->raw_out(j), idx, only_ctrl, old_space, new_space );
+      find_recur(C, result, n->raw_out(j), idx, only_ctrl, old_space, new_space );
     }
   }
 #ifdef ASSERT
-  // Search along debug_orig edges last:
-  for (Node* orig = n->debug_orig(); orig != NULL && n != orig; orig = orig->debug_orig()) {
-    if (NotANode(orig))  break;
-    find_recur( result, orig, idx, only_ctrl, old_space, new_space );
+  // Search along debug_orig edges last, checking for cycles
+  Node* orig = n->debug_orig();
+  if (orig != NULL) {
+    do {
+      if (NotANode(orig))  break;
+      find_recur(C, result, orig, idx, only_ctrl, old_space, new_space );
+      orig = orig->debug_orig();
+    } while (orig != NULL && orig != n->debug_orig());
   }
 #endif //ASSERT
 }
@@ -1414,7 +1421,7 @@ Node* Node::find(int idx) const {
   ResourceArea *area = Thread::current()->resource_area();
   VectorSet old_space(area), new_space(area);
   Node* result = NULL;
-  find_recur( result, (Node*) this, idx, false, old_space, new_space );
+  find_recur(Compile::current(), result, (Node*) this, idx, false, &old_space, &new_space );
   return result;
 }
 
@@ -1424,7 +1431,7 @@ Node* Node::find_ctrl(int idx) const {
   ResourceArea *area = Thread::current()->resource_area();
   VectorSet old_space(area), new_space(area);
   Node* result = NULL;
-  find_recur( result, (Node*) this, idx, true, old_space, new_space );
+  find_recur(Compile::current(), result, (Node*) this, idx, true, &old_space, &new_space );
   return result;
 }
 #endif

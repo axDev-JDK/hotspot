@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1999, 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ ciInstanceKlass::ciInstanceKlass(KlassHandle h_k) :
   ciKlass(h_k), _non_static_fields(NULL)
 {
   assert(get_Klass()->oop_is_instance(), "wrong type");
+  assert(get_instanceKlass()->is_loaded(), "must be at least loaded");
   instanceKlass* ik = get_instanceKlass();
 
   AccessFlags access_flags = ik->access_flags();
@@ -84,7 +85,6 @@ ciInstanceKlass::ciInstanceKlass(KlassHandle h_k) :
     if (h_k() != SystemDictionary::Object_klass()) {
       super();
     }
-    java_mirror();
     //compute_nonstatic_fields();  // done outside of constructor
   }
 
@@ -319,6 +319,9 @@ ciInstanceKlass* ciInstanceKlass::super() {
 // Get the instance of java.lang.Class corresponding to this klass.
 // Cache it on this->_java_mirror.
 ciInstance* ciInstanceKlass::java_mirror() {
+  if (is_shared()) {
+    return ciKlass::java_mirror();
+  }
   if (_java_mirror == NULL) {
     _java_mirror = ciKlass::java_mirror();
   }

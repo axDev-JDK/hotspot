@@ -740,6 +740,9 @@ class CommandLineFlags {
   develop(bool, PrintMalloc, false,                                         \
           "print all malloc/free calls")                                    \
                                                                             \
+  develop(bool, PrintMallocStatistics, false,                               \
+          "print malloc/free statistics")                                   \
+                                                                            \
   develop(bool, ZapResourceArea, trueInDebug,                               \
           "Zap freed resource/arena space with 0xABABABAB")                 \
                                                                             \
@@ -848,7 +851,7 @@ class CommandLineFlags {
   diagnostic(bool, TraceNMethodInstalls, false,                             \
              "Trace nmethod intallation")                                   \
                                                                             \
-  diagnostic(intx, ScavengeRootsInCode, 0,                                  \
+  diagnostic(intx, ScavengeRootsInCode, 1,                                  \
              "0: do not allow scavengable oops in the code cache; "         \
              "1: allow scavenging from the code cache; "                    \
              "2: emit as many constants as the compiler can see")           \
@@ -1218,6 +1221,11 @@ class CommandLineFlags {
           "Decay time (in milliseconds) to re-enable bulk rebiasing of a "  \
           "type after previous bulk rebias")                                \
                                                                             \
+  develop(bool, JavaObjectsInPerm, false,                                   \
+          "controls whether Classes and interned Strings are allocated"     \
+          "in perm.  This purely intended to allow debugging issues"        \
+          "in production.")                                                 \
+                                                                            \
   /* tracing */                                                             \
                                                                             \
   notproduct(bool, TraceRuntimeCalls, false,                                \
@@ -1537,12 +1545,8 @@ class CommandLineFlags {
   product(bool, AlwaysPreTouch, false,                                      \
           "It forces all freshly committed pages to be pre-touched.")       \
                                                                             \
-  product(bool, CMSUseOldDefaults, false,                                   \
-          "A flag temporarily introduced to allow reverting to some "       \
-          "older default settings; older as of 6.0")                        \
-                                                                            \
-  product(intx, CMSYoungGenPerWorker, 16*M,                                 \
-          "The amount of young gen chosen by default per GC worker "        \
+  product_pd(intx, CMSYoungGenPerWorker,                                    \
+          "The maximum size of young gen chosen by default per GC worker "  \
           "thread available")                                               \
                                                                             \
   product(bool, GCOverheadReporting, false,                                 \
@@ -2373,6 +2377,9 @@ class CommandLineFlags {
   develop(intx, CICloneLoopTestLimit, 100,                                  \
           "size limit for blocks heuristically cloned in ciTypeFlow")       \
                                                                             \
+  develop(intx, OSROnlyBCI, -1,                                             \
+          "OSR only at this bci.  Negative values mean exclude that bci")   \
+                                                                            \
   /* temp diagnostics */                                                    \
                                                                             \
   diagnostic(bool, TraceRedundantCompiles, false,                           \
@@ -2607,9 +2614,6 @@ class CommandLineFlags {
   develop(bool, CompileTheWorldPreloadClasses, true,                        \
           "Preload all classes used by a class before start loading")       \
                                                                             \
-  notproduct(bool, CompileTheWorldIgnoreInitErrors, false,                  \
-          "Compile all methods although class initializer failed")          \
-                                                                            \
   notproduct(intx, CompileTheWorldSafepointInterval, 100,                   \
           "Force a safepoint every n compiles so sweeper can keep up")      \
                                                                             \
@@ -2663,25 +2667,6 @@ class CommandLineFlags {
                                                                             \
   product(bool, UseStringCache, false,                                      \
           "Enable String cache capabilities on String.java")                \
-                                                                            \
-  /* byte strings */                                                        \
-  product(bool, UseCompressedStrings, false,                                \
-          "Enable byte-valued strings")                                     \
-                                                                            \
-  product(bool, SpecialStringCompress, true,                                \
-          "special version of string compress")                             \
-                                                                            \
-  product(bool, SpecialStringInflate, true,                                 \
-          "special version of string inflate")                              \
-                                                                            \
-  product(bool, SpecialStringCompareToCC, true,                             \
-          "special version of string compareToCC")                          \
-                                                                            \
-  product(bool, SpecialStringIndexOfCC, true,                               \
-          "special version of string indexOfCC")                            \
-                                                                            \
-  product(bool, SpecialStringEqualsCC, true,                                \
-          "special version of string equalsCC")                             \
                                                                             \
   /* statistics */                                                          \
   develop(bool, CountCompiledCalls, false,                                  \
@@ -3672,9 +3657,6 @@ class CommandLineFlags {
   product(bool, RequireSharedSpaces, false,                                 \
           "Require shared spaces in the permanent generation")              \
                                                                             \
-  product(bool, ForceSharedSpaces, false,                                   \
-          "Require shared spaces in the permanent generation")              \
-                                                                            \
   product(bool, DumpSharedSpaces, false,                                    \
            "Special mode: JVM reads a class list, loads classes, builds "   \
             "shared spaces, and dumps the shared spaces to a file to be "   \
@@ -3692,7 +3674,7 @@ class CommandLineFlags {
   product(uintx, SharedReadOnlySize,   10*M,                                \
           "Size of read-only space in permanent generation (in bytes)")     \
                                                                             \
-  product(uintx, SharedMiscDataSize,    4*M,                                \
+  product(uintx, SharedMiscDataSize,    NOT_LP64(4*M) LP64_ONLY(5*M),       \
           "Size of the shared data area adjacent to the heap (in bytes)")   \
                                                                             \
   product(uintx, SharedMiscCodeSize,    4*M,                                \
@@ -3711,11 +3693,15 @@ class CommandLineFlags {
           "Skip assert() and verify() which page-in unwanted shared "       \
           "objects. ")                                                      \
                                                                             \
+  diagnostic(bool, EnableInvokeDynamic, true,                               \
+          "support JSR 292 (method handles, invokedynamic, "                \
+          "anonymous classes")                                              \
+                                                                            \
   product(bool, AnonymousClasses, false,                                    \
-          "support sun.misc.Unsafe.defineAnonymousClass")                   \
+          "support sun.misc.Unsafe.defineAnonymousClass (deprecated)")      \
                                                                             \
   experimental(bool, EnableMethodHandles, false,                            \
-          "support method handles (true by default under JSR 292)")         \
+          "support method handles (deprecated)")                            \
                                                                             \
   diagnostic(intx, MethodHandlePushLimit, 3,                                \
           "number of additional stack slots a method handle may push")      \
@@ -3732,11 +3718,15 @@ class CommandLineFlags {
   experimental(bool, TrustFinalNonStaticFields, false,                      \
           "trust final non-static declarations for constant folding")       \
                                                                             \
-  experimental(bool, EnableInvokeDynamic, false,                            \
-          "recognize the invokedynamic instruction")                        \
-                                                                            \
   experimental(bool, AllowTransitionalJSR292, true,                         \
           "recognize pre-PFD formats of invokedynamic")                     \
+                                                                            \
+  experimental(bool, PreferTransitionalJSR292, false,                       \
+          "prefer pre-PFD APIs on boot class path, if they exist")          \
+                                                                            \
+  experimental(bool, AllowInvokeForInvokeGeneric, false,                    \
+          "accept MethodHandle.invoke and MethodHandle.invokeGeneric "      \
+          "as equivalent methods")                                          \
                                                                             \
   develop(bool, TraceInvokeDynamic, false,                                  \
           "trace internal invoke dynamic operations")                       \
@@ -3748,6 +3738,9 @@ class CommandLineFlags {
   diagnostic(ccstr, PauseAtStartupFile, NULL,                               \
           "The file to create and for whose removal to await when pausing " \
           "at startup. (default: ./vm.paused.<pid>)")                       \
+                                                                            \
+  diagnostic(bool, PauseAtExit, false,                                      \
+          "Pause and wait for keypress on exit if a debugger is attached")  \
                                                                             \
   product(bool, ExtendedDTraceProbes,    false,                             \
           "Enable performance-impacting dtrace probes")                     \
@@ -3766,6 +3759,9 @@ class CommandLineFlags {
                                                                             \
   diagnostic(bool, PrintDTraceDOF, false,                                   \
              "Print the DTrace DOF passed to the system for JSDT probes")   \
+                                                                            \
+  product(uintx, StringTableSize, 1009,                                     \
+          "Number of buckets in the interned String table")                 \
                                                                             \
   product(bool, UseVMInterruptibleIO, false,                                \
           "(Unstable, Solaris-specific) Thread interrupt before or with "   \
