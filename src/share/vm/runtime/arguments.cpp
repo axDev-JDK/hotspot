@@ -59,8 +59,7 @@
 #include "gc_implementation/concurrentMarkSweep/compactibleFreeListSpace.hpp"
 #endif
 
-// Note: This is a special bug reporting site for the JVM
-#define DEFAULT_VENDOR_URL_BUG "http://bugreport.sun.com/bugreport/crash.jsp"
+#define DEFAULT_VENDOR_URL_BUG "http://icedtea.classpath.org/bugzilla"
 #define DEFAULT_JAVA_LAUNCHER  "generic"
 
 char**  Arguments::_jvm_flags_array             = NULL;
