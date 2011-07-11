@@ -1558,7 +1558,9 @@ Node *PhiNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
   Node *top = phase->C->top();
   bool new_phi = (outcnt() == 0); // transforming new Phi
-  assert(!can_reshape || !new_phi, "for igvn new phi should be hooked");
+  // No change for igvn if new phi is not hooked
+  if (new_phi && can_reshape)
+    return NULL;
 
   // The are 2 situations when only one valid phi's input is left
   // (in addition to Region input).
