@@ -69,7 +69,8 @@ void ZeroStack::handle_overflow(TRAPS) {
     break;
 
   case _thread_in_vm:
-    Exceptions::throw_stack_overflow_exception(thread, __FILE__, __LINE__);
+    Exceptions::throw_stack_overflow_exception(thread, __FILE__, __LINE__,
+                                               methodHandle());
     break;
 
   default:
