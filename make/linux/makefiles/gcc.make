@@ -25,19 +25,34 @@
 #------------------------------------------------------------------------
 # CC, CPP & AS
 
-# When cross-compiling the ALT_COMPILER_PATH points
-# to the cross-compilation toolset
-ifdef CROSS_COMPILE_ARCH
-CPP = $(ALT_COMPILER_PATH)/g++
-CC  = $(ALT_COMPILER_PATH)/gcc
-HOSTCPP = g++
-HOSTCC  = gcc
-else
-CPP = g++
-CC  = gcc
-HOSTCPP = $(CPP)
-HOSTCC  = $(CC)
+ifndef HOST_GCC
+HOST_GCC = gcc
 endif
+
+ifndef HOST_CPP
+HOST_CPP = g++
+endif
+
+ifndef BUILD_GCC
+ifdef CROSS_COMPILE_ARCH
+BUILD_GCC  = $(ALT_COMPILER_PATH)/gcc
+else
+BUILD_GCC = gcc
+endif
+endif
+
+ifndef BUILD_CPP
+ifdef CROSS_COMPILE_ARCH
+BUILD_CPP = $(ALT_COMPILER_PATH)/g++$(GCC_SUFFIX)
+else
+BUILD_CPP = g++
+endif
+endif
+
+CPP = $(BUILD_CPP)
+CC = $(BUILD_GCC)
+HOSTCPP = $(HOST_CPP)
+HOSTCC  = $(HOST_GCC)
 
 AS  = $(CC) -c
 

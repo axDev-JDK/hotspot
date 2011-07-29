@@ -23,7 +23,12 @@
 #
 
 ARCH := $(shell if ([ `uname -m` = "ia64" ])  ; then echo ia64 ; elif ([ `uname -m` = "x86_64" ]) ; then echo amd64; elif ([ `uname -m` = "sparc64" ]) ; then echo sparc; else echo i386 ; fi )
-GCC      = gcc
+
+ifndef BUILD_GCC
+BUILD_GCC = gcc
+endif
+
+GCC      = $(BUILD_GCC)
 
 JAVAH    = ${JAVA_HOME}/bin/javah
 
