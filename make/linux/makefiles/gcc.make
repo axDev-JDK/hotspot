@@ -62,7 +62,11 @@ endif
 # Compiler flags
 
 # position-independent code
+ifneq ($(filter parisc ppc ppc64 s390 s390x sparc sparc64 sparcv9,$(ZERO_LIBARCH)),)
 PICFLAG = -fPIC
+else
+PICFLAG = -fpic
+endif
 
 VM_PICFLAG/LIBJVM = $(PICFLAG)
 VM_PICFLAG/AOUT   =
