@@ -36,9 +36,34 @@
   These two files define pt_regs structure differently
 */
 #ifdef _LP64
-#include "asm-sparc64/ptrace.h"
+struct pt_regs {
+	unsigned long u_regs[16]; /* globals and ins */
+	unsigned long tstate;
+	unsigned long tpc;
+	unsigned long tnpc;
+	unsigned int y;
+
+	/* We encode a magic number, PT_REGS_MAGIC, along
+	 * with the %tt (trap type) register value at trap
+	 * entry time.  The magic number allows us to identify
+	 * accurately a trap stack frame in the stack
+	 * unwinder, and the %tt value allows us to test
+	 * things like "in a system call" etc. for an arbitray
+	 * process.
+	 *
+	 * The PT_REGS_MAGIC is chosen such that it can be
+	 * loaded completely using just a sethi instruction.
+	 */
+	unsigned int magic;
+};
 #else
-#include "asm-sparc/ptrace.h"
+struct pt_regs {
+	unsigned long psr;
+	unsigned long pc;
+	unsigned long npc;
+	unsigned long y;
+	unsigned long u_regs[16]; /* globals and ins */
+};
 #endif
 
 #endif //sparc or sparcv9
