@@ -1864,7 +1864,8 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     {EM_MIPS_RS3_LE, EM_MIPS_RS3_LE, ELFCLASS32, ELFDATA2LSB, (char*)"MIPSel"},
     {EM_MIPS,        EM_MIPS,    ELFCLASS32, ELFDATA2MSB, (char*)"MIPS"},
     {EM_PARISC,      EM_PARISC,  ELFCLASS32, ELFDATA2MSB, (char*)"PARISC"},
-    {EM_68K,         EM_68K,     ELFCLASS32, ELFDATA2MSB, (char*)"M68k"}
+    {EM_68K,         EM_68K,     ELFCLASS32, ELFDATA2MSB, (char*)"M68k"},
+    {EM_SH,          EM_SH,      ELFCLASS32, ELFDATA2LSB, (char*)"SH"} /* Support little endian only*/
   };
 
   #if  (defined IA32)
@@ -1895,9 +1896,11 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     static  Elf32_Half running_arch_code=EM_MIPS;
   #elif  (defined M68K)
     static  Elf32_Half running_arch_code=EM_68K;
+  #elif  (defined SH)
+    static  Elf32_Half running_arch_code=EM_SH;
   #else
     #error Method os::dll_load requires that one of following is defined:\
-         IA32, AMD64, IA64, __sparc, __powerpc__, ARM, S390, ALPHA, MIPS, MIPSEL, PARISC, M68K
+         IA32, AMD64, IA64, __sparc, __powerpc__, ARM, S390, ALPHA, MIPS, MIPSEL, PARISC, M68K, SH
   #endif
 
   // Identify compatability class for VM's architecture and library's architecture
