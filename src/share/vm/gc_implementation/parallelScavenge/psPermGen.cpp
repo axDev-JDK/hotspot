@@ -69,7 +69,7 @@ void PSPermGen::compute_new_size(size_t used_before_collection) {
   _last_used = current_live;
 
   // We have different alignment constraints than the rest of the heap.
-  const size_t alignment = MAX2(MinPermHeapExpansion,
+  const size_t alignment = MAX2((size_t) MinPermHeapExpansion,
                                 virtual_space()->alignment());
 
   // Compute the desired size:

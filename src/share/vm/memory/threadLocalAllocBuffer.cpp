@@ -240,7 +240,7 @@ size_t ThreadLocalAllocBuffer::initial_desired_size() {
   size_t init_sz;
 
   if (TLABSize > 0) {
-    init_sz = MIN2(TLABSize / HeapWordSize, max_size());
+    init_sz = MIN2((size_t) (TLABSize / HeapWordSize), max_size());
   } else if (global_stats() == NULL) {
     // Startup issue - main thread initialized before heap initialized.
     init_sz = min_size();
