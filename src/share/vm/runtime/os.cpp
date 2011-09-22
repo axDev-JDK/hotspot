@@ -1079,6 +1079,9 @@ bool os::set_boot_path(char fileSep, char pathSep) {
         "%/lib/jsse.jar:"
         "%/lib/jce.jar:"
         "%/lib/charsets.jar:"
+        "%/lib/netx.jar:"
+        "%/lib/plugin.jar:"
+        "%/lib/rhino.jar:"
         "%/classes";
     char* sysclasspath = format_boot_path(classpath_format, home, home_len, fileSep, pathSep);
     if (sysclasspath == NULL) return false;
