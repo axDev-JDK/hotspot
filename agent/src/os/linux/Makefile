@@ -45,7 +45,7 @@ OBJS     = $(SOURCES:.c=.o)
 
 LIBS     = -lthread_db
 
-CFLAGS   = -c -fPIC -g -D_GNU_SOURCE -D$(ARCH) $(INCLUDES)
+CFLAGS   = -c -fPIC -g -D_GNU_SOURCE -D_$(ARCH)_ $(if $(filter $(ARCH),alpha),,-D$(ARCH)) $(INCLUDES)
 
 LIBSA = $(ARCH)/libsaproc.so
 
@@ -78,7 +78,7 @@ $(LIBSA): $(OBJS) mapfile
 	$(GCC) -shared $(LFLAGS_LIBSA) -o $(LIBSA) $(OBJS) $(LIBS)
 
 test.o: test.c
-	$(GCC) -c -o test.o -g -D_GNU_SOURCE -D$(ARCH) $(INCLUDES) test.c
+	$(GCC) -c -o test.o -g -D_GNU_SOURCE -D_$(ARCH)_ $(if $(filter $(ARCH),alpha),,-D$(ARCH)) $(INCLUDES) test.c
 
 test: test.o
 	$(GCC) -o test test.o -L$(ARCH) -lsaproc $(LIBS)
