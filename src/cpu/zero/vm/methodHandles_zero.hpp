@@ -25,12 +25,15 @@
 
 
 // Adapters
-// just copied from x64 for now.
 enum /* platform_dependent_constants */ {
-  adapter_code_size = NOT_LP64(30000 DEBUG_ONLY(+ 10000)) LP64_ONLY(80000 DEBUG_ONLY(+ 120000))
+  adapter_code_size = 0
 };
 
+<<<<<<< local
 #define TARGET_ARCH_NYI_6939861 
+=======
+#define TARGET_ARCH_NYI_6939861 1
+>>>>>>> other
 // ..#ifdef TARGET_ARCH_NYI_6939861
 // ..  // Here are some backward compatible declarations until the 6939861 ports are updated.
 // ..  #define _adapter_flyby    (_EK_LIMIT + 10)
@@ -70,4 +73,3 @@ enum /* platform_dependent_constants */ {
 // ..
 // ..  static void trace_method_handle(MacroAssembler* _masm, const char* adaptername) PRODUCT_RETURN;
 // ..#endif //TARGET_ARCH_NYI_6939861
-

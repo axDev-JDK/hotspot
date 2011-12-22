@@ -709,10 +709,13 @@ bool IdealLoopTree::policy_unroll( PhaseIdealLoop *phase ) const {
 
   // Adjust body_size to determine if we unroll or not
   uint body_size = _body.size();
+  // Key test to unroll loop in CRC32 java code
+  int xors_in_loop = 0;
   // Also count ModL, DivL and MulL which expand mightly
   for (uint k = 0; k < _body.size(); k++) {
     Node* n = _body.at(k);
     switch (n->Opcode()) {
+      case Op_XorI: xors_in_loop++; break; // CRC32 java code
       case Op_ModL: body_size += 30; break;
       case Op_DivL: body_size += 30; break;
       case Op_MulL: body_size += 10; break;
@@ -729,7 +732,8 @@ bool IdealLoopTree::policy_unroll( PhaseIdealLoop *phase ) const {
 
   // Check for being too big
   if (body_size > (uint)LoopUnrollLimit) {
-     // Normal case: loop too big
+    if (xors_in_loop >= 4 && body_size < (uint)LoopUnrollLimit*4) return true;
+    // Normal case: loop too big
     return false;
   }
 
@@ -2099,7 +2103,7 @@ bool IdealLoopTree::policy_do_remove_empty_loop( PhaseIdealLoop *phase ) {
   if (!_head->is_CountedLoop())
     return false;     // Dead loop
   CountedLoopNode *cl = _head->as_CountedLoop();
-  if (!cl->loopexit())
+  if (!cl->is_valid_counted_loop())
     return false; // Malformed loop
   if (!phase->is_member(this, phase->get_ctrl(cl->loopexit()->in(CountedLoopEndNode::TestValue))))
     return false;             // Infinite loop
@@ -2255,7 +2259,7 @@ bool IdealLoopTree::iteration_split_impl( PhaseIdealLoop *phase, Node_List &old_
   }
   CountedLoopNode *cl = _head->as_CountedLoop();
 
-  if (!cl->loopexit()) return true; // Ignore various kinds of broken loops
+  if (!cl->is_valid_counted_loop()) return true; // Ignore various kinds of broken loops
 
   // Do nothing special to pre- and post- loops
   if (cl->is_pre_loop() || cl->is_post_loop()) return true;
@@ -2636,7 +2640,7 @@ bool PhaseIdealLoop::intrinsify_fill(IdealLoopTree* lpt) {
 
   // Must have constant stride
   CountedLoopNode* head = lpt->_head->as_CountedLoop();
-  if (!head->stride_is_con() || !head->is_normal_loop()) {
+  if (!head->is_valid_counted_loop() || !head->is_normal_loop()) {
     return false;
   }
 

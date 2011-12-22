@@ -761,6 +761,7 @@ void os::print_cpu_info(outputStream* st) {
   // st->print("(active %d)", os::active_processor_count());
   st->print(" %s", VM_Version::cpu_features());
   st->cr();
+  pd_print_cpu_info(st);
 }
 
 void os::print_date_and_time(outputStream *st) {
@@ -1234,6 +1235,17 @@ size_t os::page_size_for_region(size_t region_min_size, size_t region_max_size,
 }
 
 #ifndef PRODUCT
+void os::trace_page_sizes(const char* str, const size_t* page_sizes, int count)
+{
+  if (TracePageSizes) {
+    tty->print("%s: ", str);
+    for (int i = 0; i < count; ++i) {
+      tty->print(" " SIZE_FORMAT, page_sizes[i]);
+    }
+    tty->cr();
+  }
+}
+
 void os::trace_page_sizes(const char* str, const size_t region_min_size,
                           const size_t region_max_size, const size_t page_size,
                           const char* base, const size_t size)
