@@ -29,11 +29,7 @@ enum /* platform_dependent_constants */ {
   adapter_code_size = 0
 };
 
-<<<<<<< local
 #define TARGET_ARCH_NYI_6939861 
-=======
-#define TARGET_ARCH_NYI_6939861 1
->>>>>>> other
 // ..#ifdef TARGET_ARCH_NYI_6939861
 // ..  // Here are some backward compatible declarations until the 6939861 ports are updated.
 // ..  #define _adapter_flyby    (_EK_LIMIT + 10)
