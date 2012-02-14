@@ -184,8 +184,10 @@ EXPORT_LIST += $(EXPORT_DOCS_DIR)/platform/jvmti/jvmti.html
 
 # client and server subdirectories have symbolic links to ../libjsig.so
 EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.so
-ifneq ($(OBJCOPY),)
-  EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.debuginfo
+ifneq ($(ZERO_BUILD), true)
+  ifneq ($(OBJCOPY),)
+    EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.debuginfo
+  endif
 endif
 
 EXPORT_SERVER_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/server
@@ -194,8 +196,10 @@ EXPORT_CLIENT_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/client
 ifndef BUILD_CLIENT_ONLY
 EXPORT_LIST += $(EXPORT_SERVER_DIR)/Xusage.txt
 EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.so
-  ifneq ($(OBJCOPY),)
-    EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.debuginfo
+  ifneq ($(ZERO_BUILD), true)
+    ifneq ($(OBJCOPY),)
+      EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.debuginfo
+    endif
   endif
 endif
 
@@ -215,9 +219,11 @@ ADD_SA_BINARIES/x86   = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.so \
                         $(EXPORT_LIB_DIR)/sa-jdi.jar 
 ADD_SA_BINARIES/sparc = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.so \
                         $(EXPORT_LIB_DIR)/sa-jdi.jar 
-ifneq ($(OBJCOPY),)
-  ADD_SA_BINARIES/x86   += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
-  ADD_SA_BINARIES/sparc += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+ifneq ($(ZERO_BUILD), true)
+  ifneq ($(OBJCOPY),)
+    ADD_SA_BINARIES/x86   += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+    ADD_SA_BINARIES/sparc += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+  endif
 endif
 ADD_SA_BINARIES/ppc   = 
 ADD_SA_BINARIES/ia64  = 
