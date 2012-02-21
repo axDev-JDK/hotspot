@@ -111,7 +111,6 @@ static DeoptimizationBlob* generate_empty_deopt_blob() {
   return DeoptimizationBlob::create(&buffer, NULL, 0, 0, 0, 0);
 }
 
-
 void SharedRuntime::generate_deopt_blob() {
   _deopt_blob = generate_empty_deopt_blob();
 }
