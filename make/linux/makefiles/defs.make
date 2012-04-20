@@ -189,7 +189,9 @@ EXPORT_LIST += $(EXPORT_DOCS_DIR)/platform/jvmti/jvmti.html
 EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.$(LIBRARY_SUFFIX)
 ifneq ($(ZERO_BUILD), true)
   ifneq ($(OBJCOPY),)
-    EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.debuginfo
+    ifneq ($(STRIP_POLICY),no_strip)
+      EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.debuginfo
+    endif
   endif
 endif
 EXPORT_SERVER_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/server
@@ -200,7 +202,9 @@ EXPORT_LIST += $(EXPORT_SERVER_DIR)/Xusage.txt
 EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.$(LIBRARY_SUFFIX)
   ifneq ($(ZERO_BUILD), true)
     ifneq ($(OBJCOPY),)
-      EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.debuginfo
+      ifneq ($(STRIP_POLICY),no_strip)
+        EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.debuginfo
+      endif
     endif
   endif
 endif
@@ -210,7 +214,9 @@ ifneq ($(ZERO_BUILD), true)
     EXPORT_LIST += $(EXPORT_CLIENT_DIR)/Xusage.txt
     EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.$(LIBRARY_SUFFIX)
     ifneq ($(OBJCOPY),)
-      EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.debuginfo
+      ifneq ($(STRIP_POLICY),no_strip)
+        EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.debuginfo
+      endif
     endif
   endif
 endif
@@ -223,8 +229,10 @@ ADD_SA_BINARIES/sparc = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX) \
                         $(EXPORT_LIB_DIR)/sa-jdi.jar 
 ifneq ($(ZERO_BUILD), true)
   ifneq ($(OBJCOPY),)
-    ADD_SA_BINARIES/x86   += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
-    ADD_SA_BINARIES/sparc += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+    ifneq ($(STRIP_POLICY),no_strip)
+      ADD_SA_BINARIES/x86   += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+      ADD_SA_BINARIES/sparc += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+    endif
   endif
 endif
 ADD_SA_BINARIES/ppc   = 
