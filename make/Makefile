@@ -371,6 +371,20 @@ $(EXPORT_SERVER_DIR)/%.debuginfo:       $(C2_DIR)/%.debuginfo
 	$(install-file)
 $(EXPORT_SERVER_DIR)/64/%.debuginfo:    $(C2_DIR)/%.debuginfo
 	$(install-file)
+
+# Debug info for shared library
+$(EXPORT_JRE_LIB_ARCH_DIR)/%.debuginfo: $(C1_DIR)/%.debuginfo
+	$(install-file)
+$(EXPORT_JRE_LIB_ARCH_DIR)/%.debuginfo: $(C2_DIR)/%.debuginfo
+	$(install-file)
+$(EXPORT_CLIENT_DIR)/%.debuginfo:       $(C1_DIR)/%.debuginfo
+	$(install-file)
+$(EXPORT_CLIENT_DIR)/64/%.debuginfo:    $(C1_DIR)/%.debuginfo
+	$(install-file)
+$(EXPORT_SERVER_DIR)/%.debuginfo:       $(C2_DIR)/%.debuginfo
+	$(install-file)
+$(EXPORT_SERVER_DIR)/64/%.debuginfo:    $(C2_DIR)/%.debuginfo
+	$(install-file)
   endif
 endif
 

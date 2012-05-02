@@ -28,7 +28,16 @@
 #include "runtime/os.hpp"
 #include "runtime/threadLocalStorage.hpp"
 
-#include <asm-sparc/traps.h>
+/* Headers for 32bit sparc with a 32bit userland end up in asm/
+ * Headers for 32bit sparc with a 64bit userland end up in asm-sparc/
+ * There is no traps.h in asm-sparc64/
+ */
+
+#if defined(__sparc__) && defined(__arch64__)
+# include <asm-sparc/traps.h>
+#else 
+# include <asm/traps.h>
+#endif
 
 void MacroAssembler::read_ccr_trap(Register ccr_save) {
   // No implementation
