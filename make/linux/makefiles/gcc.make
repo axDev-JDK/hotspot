@@ -26,40 +26,40 @@
 # CC, CXX & AS
 
 ifndef HOST_GCC
+ifdef CROSS_COMPILE_ARCH
 HOST_GCC = gcc
+else
+HOST_GCC = $(CC)
+endif
 endif
 
-ifndef HOST_CPP
-HOST_CPP = g++
+ifndef HOST_CXX
+ifdef CROSS_COMPILE_ARCH
+HOST_CXX = g++
+else
+HOST_CXX = $(CXX)
+endif
 endif
 
 ifndef BUILD_GCC
 ifdef CROSS_COMPILE_ARCH
 BUILD_GCC  = $(ALT_COMPILER_PATH)/gcc
-CXX = $(ALT_COMPILER_PATH)/g++
-CC  = $(ALT_COMPILER_PATH)/gcc
-HOSTCXX = g++
-HOSTCC  = gcc
 else
 BUILD_GCC = gcc
-CXX = g++
-CC  = gcc
-HOSTCXX = $(CXX)
-HOSTCC  = $(CC)
 endif
 endif
 
-ifndef BUILD_CPP
+ifndef BUILD_CXX
 ifdef CROSS_COMPILE_ARCH
-BUILD_CPP = $(ALT_COMPILER_PATH)/g++$(GCC_SUFFIX)
+BUILD_CXX = $(ALT_COMPILER_PATH)/g++
 else
-BUILD_CPP = g++
+BUILD_CXX = g++
 endif
 endif
 
-CPP = $(BUILD_CPP)
+CXX = $(BUILD_CXX)
 CC = $(BUILD_GCC)
-HOSTCPP = $(HOST_CPP)
+HOSTCXX = $(HOST_CXX)
 HOSTCC  = $(HOST_GCC)
 
 AS  = $(CC) -c
