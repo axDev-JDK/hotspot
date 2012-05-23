@@ -2249,7 +2249,6 @@ bool SystemDictionary::add_loader_constraint(Symbol* class_name,
 
   // Better never do a GC while we're holding these oops
   No_Safepoint_Verifier nosafepoint;
-
   klassOop klass1 = find_class(d_index1, d_hash1, constraint_name, class_loader1);
   klassOop klass2 = find_class(d_index2, d_hash2, constraint_name, class_loader2);
   return constraints()->add_entry(constraint_name, klass1, class_loader1,

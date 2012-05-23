@@ -58,8 +58,10 @@ $(LIBJSIG): $(JSIGSRCDIR)/jsig.c $(LIBJSIG_MAPFILE)
                          $(LFLAGS_JSIG) -o $@ $< -ldl
 	[ -f $(LIBJSIG_G) ] || { ln -s $@ $(LIBJSIG_G); }
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
 	$(QUIETLY) $(OBJCOPY) --only-keep-debug $@ $(LIBJSIG_DEBUGINFO)
 	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBJSIG_DEBUGINFO) $@
+  endif
   ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
   else
@@ -70,9 +72,11 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
   endif
 	[ -f $(LIBJSIG_G_DEBUGINFO) ] || { ln -s $(LIBJSIG_DEBUGINFO) $(LIBJSIG_G_DEBUGINFO); }
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
+    ifneq ($(STRIP_POLICY),no_strip)
 	$(ZIPEXE) -q -y $(LIBJSIG_DIZ) $(LIBJSIG_DEBUGINFO) $(LIBJSIG_G_DEBUGINFO)
 	$(RM) $(LIBJSIG_DEBUGINFO) $(LIBJSIG_G_DEBUGINFO)
 	[ -f $(LIBJSIG_G_DIZ) ] || { ln -s $(LIBJSIG_DIZ) $(LIBJSIG_G_DIZ); }
+    endif
   endif
 endif
 
