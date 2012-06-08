@@ -25,19 +25,42 @@
 #------------------------------------------------------------------------
 # CC, CXX & AS
 
-# When cross-compiling the ALT_COMPILER_PATH points
-# to the cross-compilation toolset
+ifndef HOST_GCC
 ifdef CROSS_COMPILE_ARCH
-CXX = $(ALT_COMPILER_PATH)/g++
-CC  = $(ALT_COMPILER_PATH)/gcc
-HOSTCXX = g++
-HOSTCC  = gcc
+HOST_GCC = gcc
 else
-CXX = g++
-CC  = gcc
-HOSTCXX = $(CXX)
-HOSTCC  = $(CC)
+HOST_GCC = $(CC)
 endif
+endif
+
+ifndef HOST_CXX
+ifdef CROSS_COMPILE_ARCH
+HOST_CXX = g++
+else
+HOST_CXX = $(CXX)
+endif
+endif
+
+ifndef BUILD_GCC
+ifdef CROSS_COMPILE_ARCH
+BUILD_GCC  = $(ALT_COMPILER_PATH)/gcc
+else
+BUILD_GCC = gcc
+endif
+endif
+
+ifndef BUILD_CXX
+ifdef CROSS_COMPILE_ARCH
+BUILD_CXX = $(ALT_COMPILER_PATH)/g++
+else
+BUILD_CXX = g++
+endif
+endif
+
+CXX = $(BUILD_CXX)
+CC = $(BUILD_GCC)
+HOSTCXX = $(HOST_CXX)
+HOSTCC  = $(HOST_GCC)
 
 AS  = $(CC) -c
 
@@ -61,7 +84,11 @@ endif
 # Compiler flags
 
 # position-independent code
+ifneq ($(filter parisc ppc ppc64 s390 s390x sparc sparc64 sparcv9,$(ZERO_LIBARCH)),)
 PICFLAG = -fPIC
+else
+PICFLAG = -fpic
+endif
 
 VM_PICFLAG/LIBJVM = $(PICFLAG)
 VM_PICFLAG/AOUT   =
