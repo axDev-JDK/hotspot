@@ -42,7 +42,31 @@ case "$OS" in
     ;;
 esac
 
-LD_LIBRARY_PATH=.:${TESTJAVA}/jre/lib/i386/client:/usr/openwin/lib:/usr/dt/lib:/usr/lib:$LD_LIBRARY_PATH
+COMP_FLAG="-m32"
+
+# Test if JDK is 32 or 64 bits
+${TESTJAVA}/bin/java -d64 -version 2> /dev/null
+
+if [ $? -eq 0 ]
+then
+    COMP_FLAG="-m64"
+fi
+
+# Get ARCH specifics
+ARCH=`uname -m`
+case "$ARCH" in
+  x86_64)
+    ARCH=amd64
+    ;;
+  i586)
+    ARCH=i386
+    ;;
+  i686)
+    ARCH=i386
+esac
+
+LD_LIBRARY_PATH=.:${TESTJAVA}/jre/lib/${ARCH}/client:${TESTJAVA}/jre/lib/${ARCH}/server:/usr/openwin/lib:/usr/dt/lib:/usr/lib:$LD_LIBRARY_PATH
+
 export LD_LIBRARY_PATH
 
 THIS_DIR=`pwd`
@@ -55,6 +79,13 @@ ${TESTJAVA}${FS}bin${FS}java ${BIT_FLAG} -fullversion
 
 ${TESTJAVA}${FS}bin${FS}javac T.java
 
-gcc -o invoke -I${TESTJAVA}/include -I${TESTJAVA}/include/linux invoke.c ${TESTJAVA}/jre/lib/i386/client/libjvm.so
+echo "Architecture: ${ARCH}"
+echo "Compilation flag: ${COMP_FLAG}"
+
+gcc ${COMP_FLAG} -o invoke \
+-L${TESTJAVA}/jre/lib/${ARCH}/client \
+-L${TESTJAVA}/jre/lib/${ARCH}/server \
+-ljvm -lpthread -I${TESTJAVA}/include -I${TESTJAVA}/include/linux invoke.c
+
 ./invoke
 exit $?

@@ -4488,7 +4488,7 @@ extern "C" jobject JNICALL jni_NewDirectByteBuffer(JNIEnv *env, void* address, j
   if (!directBufferSupportInitializeEnded) {
     if (!initializeDirectBufferSupport(env, thread)) {
 #ifndef USDT2
-      DTRACE_PROBE1(hotspot_jni, NewDirectByteBuffer__return, NULL);
+	DTRACE_PROBE1(hotspot_jni, NewDirectByteBuffer__return, (uintptr_t) NULL);
 #else /* USDT2 */
       HOTSPOT_JNI_NEWDIRECTBYTEBUFFER_RETURN(
                                              NULL);
