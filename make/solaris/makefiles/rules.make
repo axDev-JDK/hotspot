@@ -135,20 +135,10 @@ endif
 
 include $(GAMMADIR)/make/altsrc.make
 
-# Sun compiler for 64 bit Solaris does not support building non-PIC object files.
-ifdef LP64
 %.o: %.cpp
 	@echo Compiling $<
 	$(QUIETLY) $(REMOVE_TARGET)
 	$(QUIETLY) $(COMPILE.CXX) $(DEPFLAGS) -o $@ $< $(COMPILE_DONE)
-else
-%.o: %.cpp
-	@echo Compiling $<
-	$(QUIETLY) $(REMOVE_TARGET)
-	$(QUIETLY) $(if $(findstring $@, $(NONPIC_OBJ_FILES)), \
-	   $(subst $(VM_PICFLAG), ,$(COMPILE.CXX)) $(DEPFLAGS) -o $@ $< $(COMPILE_DONE), \
-	   $(COMPILE.CXX) $(DEPFLAGS) -o $@ $< $(COMPILE_DONE))
-endif
 
 %.o: %.s
 	@echo Assembling $<

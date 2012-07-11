@@ -2577,6 +2577,8 @@ const Type *TypeOopPtr::filter( const Type *kills ) const {
       return kills;             // Uplift to interface
     if (!empty() && ktkp != NULL && ktkp->klass()->is_loaded() && ktkp->klass()->is_interface())
       return kills;             // Uplift to interface
+    if (!empty() && ktkp != NULL && ktkp->klass()->is_loaded() && ktkp->klass()->is_interface())
+      return kills;             // Uplift to interface
 
     return Type::TOP;           // Canonical empty value
   }
