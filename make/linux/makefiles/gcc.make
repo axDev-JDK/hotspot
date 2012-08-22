@@ -150,7 +150,9 @@ else
 endif
 
 # Compiler warnings are treated as errors
+ifneq ($(COMPILER_WARNINGS_FATAL),false)
 WARNINGS_ARE_ERRORS = -Werror
+endif
 
 # Except for a few acceptable ones
 # Since GCC 4.3, -Wconversion has changed its meanings to warn these implicit
