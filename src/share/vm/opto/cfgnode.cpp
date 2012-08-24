@@ -941,8 +941,6 @@ const Type *PhiNode::Value( PhaseTransform *phase ) const {
       { assert(ft == _type, ""); } // Uplift to interface
     else if( !t->empty() && ttkp && ttkp->is_loaded() && ttkp->klass()->is_interface() )
       { assert(ft == _type, ""); } // Uplift to interface
-    else if( !t->empty() && ttkp && ttkp->is_loaded() && ttkp->klass()->is_interface() )
-      { assert(ft == _type, ""); } // Uplift to interface
     // Otherwise it's something stupid like non-overlapping int ranges
     // found on dying counted loops.
     else
