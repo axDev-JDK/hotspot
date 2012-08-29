@@ -97,6 +97,10 @@ CXXFLAGS =           \
   ${HS_LIB_ARCH}     \
   ${VM_DISTRO}
 
+ifdef DERIVATIVE_ID
+CPPFLAGS += -DDERIVATIVE_ID="\"$(DERIVATIVE_ID)\""
+endif
+
 # This is VERY important! The version define must only be supplied to vm_version.o
 # If not, ccache will not re-use the cache at all, since the version string might contain
 # a time and date. 
@@ -106,6 +110,10 @@ ifndef JAVASE_EMBEDDED
 ifneq (${ARCH},arm)
 CFLAGS += -DINCLUDE_TRACE
 endif
+endif
+
+ifdef DISTRIBUTION_ID
+CPPFLAGS += -DDISTRIBUTION_ID="\"$(DISTRIBUTION_ID)\""
 endif
 
 # CFLAGS_WARN holds compiler options to suppress/enable warnings.
@@ -242,13 +250,15 @@ mapfile_reorder : mapfile $(REORDERFILE)
 vm.def: $(Res_Files) $(Obj_Files)
 	sh $(GAMMADIR)/make/linux/makefiles/build_vm_def.sh *.o > $@
 
-ifeq ($(SHARK_BUILD), true)
-  STATIC_CXX = false
-else
-  ifeq ($(ZERO_LIBARCH), ppc64)
+ifeq ($(STATIC_CXX),)
+  ifeq ($(SHARK_BUILD), true)
     STATIC_CXX = false
   else
-    STATIC_CXX = true
+    ifeq ($(ZERO_LIBARCH), ppc64)
+      STATIC_CXX = false
+    else
+      STATIC_CXX = true
+    endif
   endif
 endif
 
@@ -338,8 +348,10 @@ $(LIBJVM): $(LIBJVM.o) $(LIBJVM_MAPFILE) $(LD_SCRIPT)
 	}
 ifeq ($(CROSS_COMPILE_ARCH),)
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+    ifneq ($(STRIP_POLICY),no_strip)
 	$(QUIETLY) $(OBJCOPY) --only-keep-debug $@ $(LIBJVM_DEBUGINFO)
 	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBJVM_DEBUGINFO) $@
+    endif
     ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
     else
@@ -350,9 +362,11 @@ ifeq ($(CROSS_COMPILE_ARCH),)
     endif
 	$(QUIETLY) [ -f $(LIBJVM_G_DEBUGINFO) ] || ln -s $(LIBJVM_DEBUGINFO) $(LIBJVM_G_DEBUGINFO)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
+      ifneq ($(STRIP_POLICY),no_strip)
 	$(ZIPEXE) -q -y $(LIBJVM_DIZ) $(LIBJVM_DEBUGINFO) $(LIBJVM_G_DEBUGINFO)
 	$(RM) $(LIBJVM_DEBUGINFO) $(LIBJVM_G_DEBUGINFO)
 	[ -f $(LIBJVM_G_DIZ) ] || { ln -s $(LIBJVM_DIZ) $(LIBJVM_G_DIZ); }
+      endif
     endif
   endif
 endif
