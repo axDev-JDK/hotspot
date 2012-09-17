@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2011 Red Hat, Inc.
+ * Copyright 2011, 2012 Red Hat, Inc.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,3 +29,18 @@ enum /* platform_dependent_constants */ {
   adapter_code_size = 0
 };
 
+class RicochetFrame : public ResourceObj {
+  friend class MethodHandles;
+ private:
+  /*
+    RF field            x86                 SPARC
+    sender_pc           *(rsp+0)            I7-0x8
+    sender_link         rbp                 I6+BIAS
+    exact_sender_sp     rsi/r13             I5_savedSP
+    conversion          *(rcx+&amh_conv)    L5_conv
+    saved_args_base     rax                 L4_sab (cf. Gargs = G4)
+    saved_args_layout   #NULL               L3_sal
+    saved_target        *(rcx+&mh_vmtgt)    L2_stgt
+    continuation        #STUB_CON           L1_cont
+   */
+};
