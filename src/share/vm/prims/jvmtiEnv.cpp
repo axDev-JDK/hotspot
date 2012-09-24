@@ -2791,6 +2791,9 @@ JvmtiEnv::GetLineNumberTable(methodOop method_oop, jint* entry_count_ptr, jvmtiL
   (*entry_count_ptr) = num_entries;
   (*table_ptr) = jvmti_table;
 
+  if (num_entries == 0)
+    return JVMTI_ERROR_ABSENT_INFORMATION;
+
   return JVMTI_ERROR_NONE;
 } /* end GetLineNumberTable */
 
