@@ -398,7 +398,7 @@ include $(MAKEFILES_DIR)/saproc.make
 
 #----------------------------------------------------------------------
 
-build: $(LIBJVM) $(LAUNCHER) $(LIBJSIG) $(LIBJVM_DB) $(BUILDLIBSAPROC)
+build: $(LIBJVM) $(LAUNCHER) $(LIBJSIG) $(LIBJVM_DB) $(BUILDLIBSAPROC) dtraceCheck
 
 install: install_jvm install_jsig install_saproc
 
