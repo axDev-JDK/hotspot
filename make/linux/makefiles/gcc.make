@@ -30,21 +30,20 @@ ifeq ($(SPEC),)
   # When cross-compiling the ALT_COMPILER_PATH points
   # to the cross-compilation toolset
   ifdef CROSS_COMPILE_ARCH
-    CXX = $(ALT_COMPILER_PATH)/g++
-    CC  = $(ALT_COMPILER_PATH)/gcc
-    HOSTCXX = g++
-    HOSTCC  = gcc
-    STRIP = $(ALT_COMPILER_PATH)/strip
+    CXX ?= $(ALT_COMPILER_PATH)/g++
+    CC  ?= $(ALT_COMPILER_PATH)/gcc
+    HOSTCXX ?= g++
+    HOSTCC ?= gcc
+    STRIP ?= $(ALT_COMPILER_PATH)/strip
   else
-    CXX = g++
-    CC  = gcc
-    HOSTCXX = $(CXX)
-    HOSTCC  = $(CC)
-    STRIP = strip
+    CXX ?= g++
+    CC  ?= gcc
+    HOSTCXX ?= $(CXX)
+    HOSTCC  ?= $(CC)
+    STRIP ?= strip
   endif
   AS  = $(CC) -c
 endif
-
 
 # -dumpversion in gcc-2.91 shows "egcs-2.91.66". In later version, it only
 # prints the numbers (e.g. "2.95", "3.2.1")
@@ -66,7 +65,11 @@ endif
 # Compiler flags
 
 # position-independent code
+ifneq ($(filter parisc ppc ppc64 s390 s390x sparc sparc64 sparcv9,$(ZERO_LIBARCH)),)
 PICFLAG = -fPIC
+else
+PICFLAG = -fpic
+endif
 
 VM_PICFLAG/LIBJVM = $(PICFLAG)
 VM_PICFLAG/AOUT   =
@@ -129,7 +132,9 @@ else
 endif
 
 # Compiler warnings are treated as errors
+ifneq ($(COMPILER_WARNINGS_FATAL),false)
 WARNINGS_ARE_ERRORS = -Werror
+endif
 
 # Except for a few acceptable ones
 # Since GCC 4.3, -Wconversion has changed its meanings to warn these implicit

@@ -1883,7 +1883,8 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     {EM_MIPS_RS3_LE, EM_MIPS_RS3_LE, ELFCLASS32, ELFDATA2LSB, (char*)"MIPSel"},
     {EM_MIPS,        EM_MIPS,    ELFCLASS32, ELFDATA2MSB, (char*)"MIPS"},
     {EM_PARISC,      EM_PARISC,  ELFCLASS32, ELFDATA2MSB, (char*)"PARISC"},
-    {EM_68K,         EM_68K,     ELFCLASS32, ELFDATA2MSB, (char*)"M68k"}
+    {EM_68K,         EM_68K,     ELFCLASS32, ELFDATA2MSB, (char*)"M68k"},
+    {EM_SH,          EM_SH,      ELFCLASS32, ELFDATA2LSB, (char*)"SH"} /* Support little endian only*/
   };
 
   #if  (defined IA32)
@@ -1914,9 +1915,11 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     static  Elf32_Half running_arch_code=EM_MIPS;
   #elif  (defined M68K)
     static  Elf32_Half running_arch_code=EM_68K;
+  #elif  (defined SH)
+    static  Elf32_Half running_arch_code=EM_SH;
   #else
     #error Method os::dll_load requires that one of following is defined:\
-         IA32, AMD64, IA64, __sparc, __powerpc__, ARM, S390, ALPHA, MIPS, MIPSEL, PARISC, M68K
+         IA32, AMD64, IA64, __sparc, __powerpc__, ARM, S390, ALPHA, MIPS, MIPSEL, PARISC, M68K, SH
   #endif
 
   // Identify compatability class for VM's architecture and library's architecture
@@ -2001,6 +2004,37 @@ static bool _print_ascii_file(const char* filename, outputStream* st) {
   return true;
 }
 
+bool _print_lsb_file(const char* filename, outputStream* st) {
+  int fd = open(filename, O_RDONLY);
+  if (fd == -1) {
+     return false;
+  }
+
+  char buf[512], *d_i, *d_r, *d_c;
+  int bytes;
+
+  if ((bytes = read(fd, buf, sizeof(buf)-1)) == sizeof(buf)-1) {
+     close(fd);
+     return false;
+  }
+  close(fd);
+
+  buf[bytes] = '\n';
+  buf[bytes+1] = '\0';
+  d_i = strstr(buf, "DISTRIB_ID=");
+  d_r = strstr(buf, "DISTRIB_RELEASE=");
+  d_c = strstr(buf, "DISTRIB_CODENAME=");
+  if (!d_i || !d_r || !d_c) {
+     return false;
+  }
+  d_i = strchr(d_i, '=') + 1;  *strchrnul(d_i, '\n') = '\0';
+  d_r = strchr(d_r, '=') + 1;  *strchrnul(d_r, '\n') = '\0';
+  d_c = strchr(d_c, '=') + 1;  *strchrnul(d_c, '\n') = '\0';
+  st->print("%s %s (%s)", d_i, d_r, d_c);
+
+  return true;
+}
+
 void os::print_dll_info(outputStream *st) {
    st->print_cr("Dynamic libraries:");
 
@@ -2057,6 +2091,7 @@ void os::Linux::print_distro_info(outputStream* st) {
       !_print_ascii_file("/etc/SuSE-release", st) &&
       !_print_ascii_file("/etc/turbolinux-release", st) &&
       !_print_ascii_file("/etc/gentoo-release", st) &&
+      !_print_lsb_file("/etc/lsb-release", st) &&
       !_print_ascii_file("/etc/debian_version", st) &&
       !_print_ascii_file("/etc/ltib-release", st) &&
       !_print_ascii_file("/etc/angstrom-version", st)) {
