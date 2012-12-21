@@ -26,21 +26,14 @@
 
 // Adapters
 enum /* platform_dependent_constants */ {
-  adapter_code_size = 0
+  adapter_code_size = sizeof(ZeroEntry) * (Interpreter::method_handle_invoke_LAST - Interpreter::method_handle_invoke_FIRST + 1)
 };
 
-class RicochetFrame : public ResourceObj {
-  friend class MethodHandles;
- private:
-  /*
-    RF field            x86                 SPARC
-    sender_pc           *(rsp+0)            I7-0x8
-    sender_link         rbp                 I6+BIAS
-    exact_sender_sp     rsi/r13             I5_savedSP
-    conversion          *(rcx+&amh_conv)    L5_conv
-    saved_args_base     rax                 L4_sab (cf. Gargs = G4)
-    saved_args_layout   #NULL               L3_sal
-    saved_target        *(rcx+&mh_vmtgt)    L2_stgt
-    continuation        #STUB_CON           L1_cont
-   */
-};
+private:
+  static oop popFromStack(TRAPS);
+  static void invoke_target(methodOop method, TRAPS);
+  static int method_handle_entry_invokeBasic(methodOop method, intptr_t UNUSED, TRAPS);
+  static int method_handle_entry_linkToStaticOrSpecial(methodOop method, intptr_t UNUSED, TRAPS);
+  static int method_handle_entry_linkToVirtual(methodOop method, intptr_t UNUSED, TRAPS);
+  static int method_handle_entry_linkToInterface(methodOop method, intptr_t UNUSED, TRAPS);
+  static int method_handle_entry_invalid(methodOop method, intptr_t UNUSED, TRAPS);
