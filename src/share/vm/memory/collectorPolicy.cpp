@@ -330,7 +330,7 @@ void GenCollectorPolicy::initialize_size_info() {
     // yield a size that is too small) and bound it by MaxNewSize above.
     // Ergonomics plays here by previously calculating the desired
     // NewSize and MaxNewSize.
-    max_new_size = MIN2(MAX2(max_new_size, NewSize), MaxNewSize);
+    max_new_size = MIN2(MAX2(max_new_size, (size_t) NewSize), (size_t) MaxNewSize);
   }
   assert(max_new_size > 0, "All paths should set max_new_size");
 

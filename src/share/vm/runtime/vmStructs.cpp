@@ -2489,7 +2489,7 @@ typedef TwoOopHashtable<Symbol*, mtClass>     SymbolTwoOopHashtable;
   /* frame              */                                                \
   /**********************/                                                \
                                                                           \
-  X86_ONLY(declare_constant(frame::entry_frame_call_wrapper_offset))      \
+  NOT_ZERO(X86_ONLY(declare_constant(frame::entry_frame_call_wrapper_offset)))      \
   declare_constant(frame::pc_return_offset)                               \
                                                                           \
   /*************/                                                         \
