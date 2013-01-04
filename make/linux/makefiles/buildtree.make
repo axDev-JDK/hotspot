@@ -56,6 +56,7 @@
 # having to read the dependency files for the vm.
 
 -include $(SPEC)
+include $(GAMMADIR)/make/defs.make
 include $(GAMMADIR)/make/scm.make
 include $(GAMMADIR)/make/altsrc.make
 
@@ -192,6 +193,7 @@ flags.make: $(BUILDTREE_MAKE) ../shared_dirs.lst
 	$(BUILDTREE_COMMENT); \
 	echo; \
 	echo "Platform_file = $(PLATFORM_FILE)" | sed 's|$(GAMMADIR)|$$(GAMMADIR)|'; \
+	echo "JVM_VARIANTS = $(JVM_VARIANTS)"; \
 	sed -n '/=/s/^ */Platform_/p' < $(PLATFORM_FILE); \
 	echo; \
 	echo "GAMMADIR = $(GAMMADIR)"; \
