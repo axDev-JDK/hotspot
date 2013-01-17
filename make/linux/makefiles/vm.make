@@ -284,9 +284,6 @@ else
 
   LIBS_VM                  += $(LIBS)
 endif
-ifeq ($(JVM_VARIANT_ZERO), true)
-  LIBS_VM += $(LIBFFI_LIBS)
-endif
 ifeq ($(JVM_VARIANT_ZEROSHARK), true)
   LIBS_VM   += $(LIBFFI_LIBS) $(LLVM_LIBS)
   LFLAGS_VM += $(LLVM_LDFLAGS)

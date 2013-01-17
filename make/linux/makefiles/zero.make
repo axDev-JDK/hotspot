@@ -30,3 +30,7 @@ TYPE = ZERO
 
 # Install libjvm.so, etc in in server directory.
 VM_SUBDIR = server
+
+# Make sure libffi is included
+CFLAGS += $(LIBFFI_CFLAGS)
+LIBS_VM += $(LIBFFI_LIBS)
