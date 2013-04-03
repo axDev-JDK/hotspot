@@ -58,8 +58,13 @@ THIS_DIR=`pwd`
 
 ${TESTJAVA}${FS}bin${FS}java ${TESTVMOPTS} -version
 
-${TESTJAVA}${FS}bin${FS}jar xvf ${TESTSRC}${FS}testcase.jar
+# first step: compile GenOOMCrash generator
+${TESTJAVA}${FS}bin${FS}javac GenOOMCrashClass.java
 
+# second step: run the generator to create test class
+${TESTJAVA}${FS}bin${FS}java GenOOMCrashClass 1 4000
+
+# third step: run the reproducer
 ${TESTJAVA}${FS}bin${FS}java ${TESTVMOPTS} OOMCrashClass4000_1 > test.out 2>&1
 
 cat test.out

@@ -93,7 +93,7 @@ class CodeSection VALUE_OBJ_CLASS_SPEC {
   address     _locs_point;      // last relocated position (grows upward)
   bool        _locs_own;        // did I allocate the locs myself?
   bool        _frozen;          // no more expansion of this section
-  char        _index;           // my section number (SECT_INST, etc.)
+  signed char _index;           // my section number (SECT_INST, etc.)
   CodeBuffer* _outer;           // enclosing CodeBuffer
 
   // (Note:  _locs_point used to be called _last_reloc_offset.)
