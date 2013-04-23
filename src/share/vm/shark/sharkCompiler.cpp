@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2008, 2009, 2010, 2011 Red Hat, Inc.
+ * Copyright 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -319,7 +319,7 @@ void SharkCompiler::free_compiled_method(address code) {
   // finish with the exception of the VM thread, so we can consider
   // ourself the owner of the execution engine lock even though we
   // can't actually acquire it at this time.
-  assert(Thread::current()->is_VM_thread(), "must be called by VM thread");
+  assert(JavaThread::current()->thread_state() == _thread_in_vm, "must run in vm mode");
   assert(SafepointSynchronize::is_at_safepoint(), "must be at safepoint");
 
   SharkEntry *entry = (SharkEntry *) code;

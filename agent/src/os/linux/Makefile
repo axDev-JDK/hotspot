@@ -23,7 +23,12 @@
 #
 
 ARCH := $(shell if ([ `uname -m` = "ia64" ])  ; then echo ia64 ; elif ([ `uname -m` = "x86_64" ]) ; then echo amd64; elif ([ `uname -m` = "sparc64" ]) ; then echo sparc; else echo i386 ; fi )
-GCC      = gcc
+
+ifndef BUILD_GCC
+BUILD_GCC = gcc
+endif
+
+GCC      = $(BUILD_GCC)
 
 JAVAH    = ${JAVA_HOME}/bin/javah
 
@@ -40,7 +45,7 @@ OBJS     = $(SOURCES:.c=.o)
 
 LIBS     = -lthread_db
 
-CFLAGS   = -c -fPIC -g -D_GNU_SOURCE -D$(ARCH) $(INCLUDES) -D_FILE_OFFSET_BITS=64
+CFLAGS   = -c -fPIC -g -D_GNU_SOURCE -D_$(ARCH)_ $(if $(filter $(ARCH),alpha),,-D$(ARCH)) $(INCLUDES) -D_FILE_OFFSET_BITS=64
 
 LIBSA = $(ARCH)/libsaproc.so
 
@@ -73,7 +78,7 @@ $(LIBSA): $(OBJS) mapfile
 	$(GCC) -shared $(LFLAGS_LIBSA) -o $(LIBSA) $(OBJS) $(LIBS)
 
 test.o: test.c
-	$(GCC) -c -o test.o -g -D_GNU_SOURCE -D$(ARCH) $(INCLUDES) test.c
+	$(GCC) -c -o test.o -g -D_GNU_SOURCE -D_$(ARCH)_ $(if $(filter $(ARCH),alpha),,-D$(ARCH)) $(INCLUDES) test.c
 
 test: test.o
 	$(GCC) -o test test.o -L$(ARCH) -lsaproc $(LIBS)

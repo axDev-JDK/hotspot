@@ -2955,7 +2955,7 @@ class CommandLineFlags {
   product(uintx, InitialHeapSize, 0,                                        \
           "Initial heap size (in bytes); zero means OldSize + NewSize")     \
                                                                             \
-  product(uintx, MaxHeapSize, ScaleForWordSize(96*M),                       \
+  product(uintx, MaxHeapSize, ScaleForWordSize(512*M),                      \
           "Maximum heap size (in bytes)")                                   \
                                                                             \
   product(uintx, OldSize, ScaleForWordSize(4*M),                            \
