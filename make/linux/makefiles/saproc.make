@@ -101,8 +101,11 @@ $(LIBSAPROC): $(SASRCFILES) $(SAMAPFILE)
 	           -lthread_db
 	$(QUIETLY) [ -f $(LIBSAPROC_G) ] || { ln -s $@ $(LIBSAPROC_G); }
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
 	$(QUIETLY) $(OBJCOPY) --only-keep-debug $@ $(LIBSAPROC_DEBUGINFO)
 	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBSAPROC_DEBUGINFO) $@
+	[ -f $(LIBSAPROC_G_DEBUGINFO) ] || { ln -s $(LIBSAPROC_DEBUGINFO) $(LIBSAPROC_G_DEBUGINFO); }
+  endif
   ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
   else
@@ -111,11 +114,12 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
     # implied else here is no stripping at all
     endif
   endif
-	[ -f $(LIBSAPROC_G_DEBUGINFO) ] || { ln -s $(LIBSAPROC_DEBUGINFO) $(LIBSAPROC_G_DEBUGINFO); }
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
+    ifneq ($(STRIP_POLICY),no_strip)
 	$(ZIPEXE) -q -y $(LIBSAPROC_DIZ) $(LIBSAPROC_DEBUGINFO) $(LIBSAPROC_G_DEBUGINFO)
 	$(RM) $(LIBSAPROC_DEBUGINFO) $(LIBSAPROC_G_DEBUGINFO)
 	[ -f $(LIBSAPROC_G_DIZ) ] || { ln -s $(LIBSAPROC_DIZ) $(LIBSAPROC_G_DIZ); }
+    endif
   endif
 endif
 

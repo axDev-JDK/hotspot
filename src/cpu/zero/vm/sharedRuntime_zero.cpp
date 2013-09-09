@@ -107,8 +107,7 @@ JRT_END
 
 
 static RuntimeStub* generate_empty_runtime_stub(const char* name) {
-  CodeBuffer buffer(name, 0, 0);
-  return RuntimeStub::new_runtime_stub(name, &buffer, 0, 0, NULL, false);
+  return CAST_FROM_FN_PTR(RuntimeStub*,zero_stub);
 }
 
 static SafepointBlob* generate_empty_safepoint_blob() {
@@ -118,7 +117,6 @@ static SafepointBlob* generate_empty_safepoint_blob() {
 static DeoptimizationBlob* generate_empty_deopt_blob() {
   return CAST_FROM_FN_PTR(DeoptimizationBlob*,zero_stub);
 }
-
 
 void SharedRuntime::generate_deopt_blob() {
   _deopt_blob = generate_empty_deopt_blob();

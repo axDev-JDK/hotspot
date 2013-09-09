@@ -45,9 +45,6 @@
                         jvm_type       CDATA #IMPLIED
                         builtin_type   CDATA #IMPLIED>
 <!ATTLIST struct_type   id             CDATA #REQUIRED>
-<!ATTLIST structarray   type           CDATA #REQUIRED
-                        field          CDATA #REQUIRED
-                        label          CDATA #REQUIRED>
 <!ATTLIST primary_type  symbol         CDATA #REQUIRED
                         datatype       CDATA #REQUIRED
                         contenttype    CDATA #REQUIRED

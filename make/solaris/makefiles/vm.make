@@ -85,10 +85,18 @@ CXXFLAGS =           \
   ${HS_LIB_ARCH}     \
   ${VM_DISTRO}
 
+ifdef DERIVATIVE_ID
+CPPFLAGS += -DDERIVATIVE_ID="\"$(DERIVATIVE_ID)\""
+endif
+
 # This is VERY important! The version define must only be supplied to vm_version.o
 # If not, ccache will not re-use the cache at all, since the version string might contain
 # a time and date.
 vm_version.o: CXXFLAGS += ${JRE_VERSION}
+
+ifdef DISTRIBUTION_ID
+CPPFLAGS += -DDISTRIBUTION_ID="\"$(DISTRIBUTION_ID)\""
+endif
 
 # Large File Support
 ifneq ($(LP64), 1)
@@ -301,6 +309,7 @@ ifeq ($(filter -sbfast -xsbfast, $(CFLAGS_BROWSE)),)
 	$(QUIETLY) [ -f $(LIBJVM_G) ] || ln -s $@ $(LIBJVM_G)
 	$(QUIETLY) [ -f $(LIBJVM_G).1 ] || ln -s $@.1 $(LIBJVM_G).1
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
 # gobjcopy crashes on "empty" section headers with the SHF_ALLOC flag set.
 # Clear the SHF_ALLOC flag (if set) from empty section headers.
 # An empty section header has sh_addr == 0 and sh_size == 0.
@@ -312,6 +321,7 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
 # Use $(ADD_GNU_DEBUGLINK) until a fixed $(OBJCOPY) is available.
 #	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBJVM_DEBUGINFO) $@
 	$(QUIETLY) $(ADD_GNU_DEBUGLINK) $(LIBJVM_DEBUGINFO) $@
+  endif
   ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
   else
@@ -322,9 +332,11 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
   endif
 	$(QUIETLY) [ -f $(LIBJVM_G_DEBUGINFO) ] || ln -s $(LIBJVM_DEBUGINFO) $(LIBJVM_G_DEBUGINFO)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
+    ifneq ($(STRIP_POLICY),no_strip)
 	$(ZIPEXE) -q -y $(LIBJVM_DIZ) $(LIBJVM_DEBUGINFO) $(LIBJVM_G_DEBUGINFO)
 	$(RM) $(LIBJVM_DEBUGINFO) $(LIBJVM_G_DEBUGINFO)
 	[ -f $(LIBJVM_G_DIZ) ] || { ln -s $(LIBJVM_DIZ) $(LIBJVM_G_DIZ); }
+    endif
   endif
 endif
 endif # filter -sbfast -xsbfast
